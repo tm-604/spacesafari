@@ -301,8 +301,9 @@ body{
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .brand h1:active{opacity:0.7;}
+@media (max-width:460px){.brand h1{font-size:0.8rem;}}
 .brand-actions{display:flex; gap:8px;}
-.weather-chip{display:flex;align-items:center;gap:5px;background:var(--night-2);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-family:var(--font-display);font-weight:600;font-size:0.8125rem;color:var(--ink);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.weather-chip{display:flex;align-items:center;gap:5px;background:var(--night-2);border:1px solid var(--line);border-radius:20px;padding:4px 9px;font-family:var(--font-display);font-weight:600;font-size:0.8125rem;color:var(--ink);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .weather-chip.offline{opacity:0.55;}
 .weather-chip-icon{font-size:1rem;line-height:1;}
 .now-playing-icon{display:inline-flex;align-items:center;}
@@ -425,6 +426,7 @@ body{
 .font-size-btn[data-theme]{width:auto; padding:0 14px; font-size:0.8125rem;}
 .font-size-btn[data-timeformat]{width:auto; padding:0 14px; font-size:0.8125rem;}
 .font-size-btn[data-checkmarks-opt]{width:auto; padding:0 14px; font-size:0.8125rem;}
+.font-size-btn[data-scheduleview]{width:auto; padding:0 14px; font-size:0.8125rem;}
 
 /* ----------- Conflict warning ----------- */
 #conflictWarn{
@@ -450,12 +452,12 @@ body{
 #conflictWarn .conflict-ok:active{border-color:var(--accent); color:var(--accent);}
 
 /* font size scaling on timetable & fav cards */
-body.font-sm .slot .nm{font-size:0.6875rem;}
+body.font-sm .slot .nm, body.font-sm .rows-block .nm{font-size:0.6875rem;}
 body.font-sm .fav-card .nm{font-size:0.6875rem;}
-body.font-lg .slot .nm{font-size:1rem;}
+body.font-lg .slot .nm, body.font-lg .rows-block .nm{font-size:1rem;}
 body.font-lg.cols-1 .slot .nm{font-size:1.125rem;}
 body.font-lg .fav-card .nm{font-size:1rem;}
-body.font-xl .slot .nm{font-size:1.25rem;}
+body.font-xl .slot .nm, body.font-xl .rows-block .nm{font-size:1.25rem;}
 body.font-xl.cols-1 .slot .nm{font-size:1.375rem;}
 body.font-xl .fav-card .nm{font-size:1.25rem;}
 
@@ -522,6 +524,12 @@ body.font-xl .fav-card .nm{font-size:1.25rem;}
 
 /* ---------------- Grid schedule ---------------- */
 main{padding:14px 8px 55vh 8px;}
+/* Rows renders its own fixed-height, self-scrolling box (.rows-sched-wrap)
+   that already fills the remaining viewport — Grid/List's huge bottom
+   padding (reserved so their last row can clear the floating "back to now"
+   button) would just add dead page-scroll space beneath that box. Toggled
+   in render() alongside the scheduleView dispatch. */
+body.view-rows main{padding:14px 8px 14px 8px;}
 
 .sched{
   display:grid; gap:5px; padding-bottom:20px;
@@ -530,24 +538,27 @@ main{padding:14px 8px 55vh 8px;}
 .sched::-webkit-scrollbar{display:none;}
 .time-cell{
   font-family:var(--font-mono); font-size:0.78125rem; font-weight:500; color:var(--ink-dim);
-  display:flex; align-items:flex-start; justify-content:flex-end; padding-right:6px; padding-top:1px;
+  display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; padding-right:6px; padding-top:1px;
   line-height:1; text-align:right; grid-column:1;
   position:sticky; left:0; z-index:5; background:var(--night);
 }
+/* AM/PM half of the compact hour label (fmtHour()), stacked under the hour
+   digit in 12-hour mode — 24-hour mode never emits this span. */
+.time-cell-ampm{display:block; font-size:0.6rem; opacity:0.7; line-height:1.1; margin-top:1px;}
 /* one per stage column, row 1 — invisible, exists only so scroll-snap has
    a per-column anchor to align to. Kept separate from the grid's row-height
    sizing (width/height:1px) so it can never affect row alignment across
    columns the way a full shared grid naturally keeps everything aligned. */
 .col-snap{grid-row:1; width:1px; height:1px; pointer-events:none; scroll-snap-align:start; scroll-snap-stop:always;}
-.slot{
+.slot, .rows-block{
   border-radius:9px; padding:7px 9px;
   display:flex; flex-direction:column; justify-content:center;
   border:1px solid transparent; overflow:hidden;
   position:relative; z-index:1;
 }
 .slot.empty{background:transparent; border:none;}
-.slot .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink);}
-.slot .sub{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:3px;}
+.slot .nm, .rows-block .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink); overflow-wrap:break-word;}
+.slot .sub, .rows-block .sub{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:3px;}
 
 /* Stage-tinted background/border for act slots — reads the --sc-rgb custom
    property set inline per-element (same pattern as .artist-stage-badge and
@@ -555,9 +566,9 @@ main{padding:14px 8px 55vh 8px;}
    per-stage-name rules — bug found 2026-07-15: this app never actually had
    one, only the rounded shape existed with no color, see _template
    CHANGELOG v1.4 for the root cause. */
-.slot.act{background:rgba(var(--sc-rgb),0.13); border-color:rgba(var(--sc-rgb),0.22); cursor:pointer;}
-body.theme-light .slot.act{background:rgba(var(--sc-rgb),0.10); border-color:rgba(var(--sc-rgb),0.28);}
-.slot.act:active{filter:brightness(1.25);}
+.slot.act, .rows-block.act{background:rgba(var(--sc-rgb),0.13); border-color:rgba(var(--sc-rgb),0.22); cursor:pointer;}
+body.theme-light .slot.act, body.theme-light .rows-block.act{background:rgba(var(--sc-rgb),0.10); border-color:rgba(var(--sc-rgb),0.28);}
+.slot.act:active, .rows-block.act:active{filter:brightness(1.25);}
 .pill-badges{display:inline-flex; gap:3px; vertical-align:middle; margin-left:5px; transform:translateY(-1px); pointer-events:none;}
 .pill-badge{
   width:14px; height:14px; border-radius:50%; background:rgba(6,7,13,0.72);
@@ -570,34 +581,70 @@ body.theme-light .pill-badge{background:rgba(255,255,255,0.85); box-shadow:0 0 0
 .pill-badge-bell svg{fill:none; stroke:var(--accent);}
 .pill-badge-check svg{fill:none; stroke:var(--checked);}
 
-.slot.break{background:repeating-linear-gradient(45deg,var(--break-a),var(--break-a) 6px,var(--break-b) 6px,var(--break-b) 12px); border-color:var(--line);}
-.slot.break .nm{color:var(--ink-dim); font-weight:500; font-size:0.6875rem; letter-spacing:0.05em; text-transform:uppercase;}
+.slot.break, .rows-block.break{background:repeating-linear-gradient(45deg,var(--break-a),var(--break-a) 6px,var(--break-b) 6px,var(--break-b) 12px); border-color:var(--line);}
+.slot.break .nm, .rows-block.break .nm{color:var(--ink-dim); font-weight:500; font-size:0.6875rem; letter-spacing:0.05em; text-transform:uppercase;}
 
-.slot.special{
+.slot.special, .rows-block.special{
   background:radial-gradient(circle at 50% 40%, var(--special-bg-1) 0%, var(--special-bg-2) 65%);
   border:1px solid var(--special);
   box-shadow:0 0 14px rgba(255,211,77,0.22), inset 0 0 18px rgba(255,211,77,0.08);
   align-items:center; text-align:center;
 }
-.slot.special .sun{
+.slot.special .sun, .rows-block.special .sun{
   width:16px;height:16px;border-radius:50%; margin:0 auto 3px auto;
   background:radial-gradient(circle at 50% 50%, var(--special-bg-2) 44%, transparent 45%),
              radial-gradient(circle at 50% 50%, var(--special), #ff9d2e);
   box-shadow:0 0 10px 2px rgba(255,211,77,0.55);
 }
-.slot.special .nm{
+.slot.special .nm, .rows-block.special .nm{
   font-family:var(--font-display); font-weight:700; letter-spacing:0.06em;
   color:var(--special); text-transform:uppercase; font-size:0.625rem;
   text-shadow:0 0 8px rgba(255,211,77,0.45);
 }
-.slot.special .sub{color:rgba(255,211,77,0.75);}
+.slot.special .sub, .rows-block.special .sub{color:rgba(255,211,77,0.75);}
 
-.slot.now{outline:2px solid #fff; outline-offset:-2px;}
+.slot.now, .fav-card.now, .rows-block.now{outline:2px solid #fff; outline-offset:-2px;}
 .now-tag{
   font-family:var(--font-mono); font-size:0.5rem; font-weight:600;
   color:var(--night); background:#fff; padding:1px 5px; border-radius:5px;
   align-self:flex-start; margin-top:3px; letter-spacing:0.05em;
 }
+
+/* ---------------- Rows schedule (Boom Festival-style: stages as sticky
+   rows, time running horizontally, one day at a time) ----------------
+   Self-contained scroll box instead of a second sticky axis stacked on top
+   of #stickyTop/#stickyDays — lower risk than nesting sticky contexts on
+   shared code. --stickyOffsetH (set in updateStickyVars()) is the combined
+   height of those two bars, so this box exactly fills the rest of the
+   viewport below them. */
+.rows-sched-wrap{
+  height:calc(100vh - var(--stickyOffsetH,0px)); overflow:auto;
+  scroll-snap-type:x mandatory; -ms-overflow-style:none; scrollbar-width:none;
+}
+.rows-sched-wrap::-webkit-scrollbar{display:none;}
+.rows-grid{display:grid; gap:5px; padding-bottom:20px; position:relative;}
+.rows-corner{
+  grid-row:1; grid-column:1; position:sticky; top:0; left:0; z-index:7; background:var(--night);
+}
+/* Sticky hour header — mirrors .time-cell but on the opposite (top) axis,
+   since Rows transposes Grid's vertical time rail into a horizontal one. */
+.rows-hour-cell{
+  font-family:var(--font-mono); font-size:0.78125rem; font-weight:500; color:var(--ink-dim);
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:1px;
+  line-height:1; text-align:center;
+  position:sticky; top:0; z-index:5; background:var(--night);
+}
+/* Sticky stage-name column — mirrors .time-cell's left:0 sticky treatment,
+   just flipped to a single column instead of the time rail. */
+.rows-stage-cell{
+  grid-column:1; font-family:var(--font-display); font-weight:600; font-size:0.75rem;
+  display:flex; align-items:center; padding:6px 8px 6px 0;
+  position:sticky; left:0; z-index:4; background:var(--night);
+}
+/* per-column scroll-snap anchor along the time axis — the mirror image of
+   Grid's .col-snap (there, columns are stages and rows are the snap axis;
+   here, rows are stages and columns are the snap axis). */
+.row-snap{grid-row:2; width:1px; height:1px; pointer-events:none; scroll-snap-align:start; scroll-snap-stop:always;}
 
 /* day divider spanning the full width of the grid — gets its own dedicated
    grid row (see gridRow/dividerRow in JS) so it never overlaps an act card */
@@ -873,6 +920,12 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
 .fav-card .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink);}
 .fav-card .sub{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:3px;}
 
+/* List view: flat chronological rows, one per line (no clustering like
+   .fav-cluster — that grid only applies within renderFavorites()'s
+   overlap-based 3-column layout, not here). */
+.list-row{margin:0 0 6px 0;}
+.list-row-stage{font-family:var(--font-mono); font-size:0.68rem; font-weight:600;}
+
 .fav-backup{margin-top:22px; padding-top:16px; border-top:1px solid var(--line);}
 .fav-backup-label{font-size:0.75rem; color:var(--ink-dim); line-height:1.6; margin-bottom:12px;}
 .fav-backup-btn{
@@ -956,10 +1009,10 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
 </button>
 <div id="stickyTop">
   <div class="brand">
-    <div style="display:flex;align-items:center;gap:8px;">
+    <div style="display:flex;align-items:center;gap:6px;">
       <h1 id="homeLogo" role="button" aria-label="Return to now">SPACE SAFARI</h1>
       <button class="weather-chip" id="weatherBtn" aria-label="Weather"><span class="weather-chip-icon">🌡️</span><span id="weatherChipTemp">—°</span></button>
-      <button class="weather-chip" id="nowPlayingBtn" aria-label="Now playing"><span class="weather-chip-icon now-playing-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span></button>
+      <button class="icon-btn" id="nowPlayingBtn" aria-label="Now playing"><span class="weather-chip-icon now-playing-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span></button>
     </div>
     <div class="brand-actions">
       <button class="icon-btn" id="settingsBtn" aria-label="Settings">
@@ -1184,6 +1237,14 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
           </div>
         </div>
         <div class="settings-row">
+          <span class="settings-row-label">Schedule view</span>
+          <div class="font-size-row">
+            <button class="font-size-btn" id="scheduleViewGridBtn" data-scheduleview="grid">Grid</button>
+            <button class="font-size-btn" id="scheduleViewRowsBtn" data-scheduleview="rows">Rows</button>
+            <button class="font-size-btn" id="scheduleViewListBtn" data-scheduleview="list">List</button>
+          </div>
+        </div>
+        <div class="settings-row">
           <span class="settings-row-label">Day/Night mode</span>
           <div class="font-size-row">
             <button class="font-size-btn" id="themeAutoBtn" data-theme="auto">Auto</button>
@@ -1211,12 +1272,17 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
         <div id="schemePicker" class="scheme-picker-panel" hidden></div>
       </div>
       <div class="settings-group">
-        <div class="settings-group-label">Offline use</div>
-        <div class="fav-backup-label">For full offline reliability, add this app to your home screen. It'll then work without an internet connection, and stay easy to find between festival days.</div>
-        <div class="fav-backup-label">Heads up: if you don't install it and just use the app in your browser, iOS may automatically clear your saved favorites and reminders after about <strong>7 days</strong> without opening the page — a Safari privacy restriction, not something this app controls. Installing to your home screen avoids this entirely.</div>
-        <div class="fav-backup-label" id="installAlreadyMsg" style="display:none;">✓ Already installed on this device.</div>
-        <div class="fav-backup-label" id="installInstructions" style="display:none;"></div>
-        <button class="fav-backup-btn" id="installBtn" style="display:none;">Install app</button>
+        <button class="scheme-picker-toggle" id="offlineUseToggle" aria-expanded="false" style="width:100%;">
+          <span class="scheme-picker-toggle-name">Offline use / Install app</span>
+          <svg class="scheme-picker-chevron" id="offlineUseChevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="offlineUsePanel" class="scheme-picker-panel" hidden>
+          <div class="fav-backup-label">This app is designed to work offline. For the best experience, add it to your home screen.</div>
+          <div class="fav-backup-label">Warning: if you don't install it and just use the app in your browser, iOS may automatically clear your saved favorites and checkmarks after about <strong>7 days</strong> without opening the page — an iOS privacy restriction, not something this app controls. Bookmarking this page to your home screen avoids this entirely.</div>
+          <div class="fav-backup-label" id="installAlreadyMsg" style="display:none;">✓ Already installed on this device.</div>
+          <div class="fav-backup-label" id="installInstructions" style="display:none;"></div>
+          <button class="fav-backup-btn" id="installBtn" style="display:none;">Install app</button>
+        </div>
       </div>
       <div class="settings-group">
         <div class="settings-group-label">Discovery checkmarks</div>
@@ -1487,6 +1553,15 @@ function updateFavBadge(){
 // Default stays 24-hour for everyone unless a user manually opts into
 // 12-hour via Settings — never auto-detected from browser/OS locale.
 let timeFormat = (() => { try{ return localStorage.getItem('festapp_timeformat') || '24'; }catch(e){ return '24'; } })();
+// Schedule view: 'grid' (default for <=3 stages), 'rows' (Phase 2, Boom-style
+// stage rows — default for 4+ stages), or 'list' (flat chronological list
+// across stages). The stage-count fallback only applies to users who have
+// never touched the Settings switch — an explicit localStorage choice always
+// wins.
+let scheduleView = (()=>{
+  try{ const v=localStorage.getItem('festapp_scheduleview'); if(v==='rows'||v==='list'||v==='grid') return v; }catch(e){}
+  return STAGES.length>=4 ? 'rows' : 'grid';
+})();
 function fmt(iso){
   const d=new Date(iso);
   const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0');
@@ -1496,6 +1571,21 @@ function fmt(iso){
     return h12+':'+m+' '+period;
   }
   return String(h).padStart(2,'0')+':'+m;
+}
+// Compact hour-only label for axis labels (time rail in Grid, hour header in
+// Rows) — NOT used for event time ranges, which must keep minute precision
+// (see fmt() above). 24-hour: "19". 12-hour: hour digit + a small stacked
+// AM/PM span (see .time-cell-ampm CSS) since minutes were already implicit
+// (labels only ever appear on the hour, t.getMinutes()===0).
+function fmtHour(iso){
+  const d=new Date(iso);
+  const h=d.getHours();
+  if(timeFormat==='12'){
+    const period = h<12 ? 'AM' : 'PM';
+    let h12 = h%12; if(h12===0) h12=12;
+    return h12+'<span class="time-cell-ampm">'+period+'</span>';
+  }
+  return String(h).padStart(2,'0');
 }
 function dayStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function startOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
@@ -1524,6 +1614,9 @@ function festDays(){
   return days;
 }
 const FEST_DAYS = festDays();
+// Rows view shows one day at a time; defaults to "today" if the festival is
+// currently running, else the first festival day.
+let rowsDay = FEST_DAYS.find(d=>dayStr(d)===dayStr(new Date())) || FEST_DAYS[0];
 
 /* ---------- sticky heights for scroll offset math ---------- */
 function stickyOffset(){
@@ -1534,6 +1627,8 @@ function stickyOffset(){
 function updateStickyVars(){
   const t=document.getElementById('stickyTop').getBoundingClientRect().height;
   document.documentElement.style.setProperty('--stickyTopH', t+'px');
+  const d=document.getElementById('stickyDays').getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--stickyOffsetH', (t+d)+'px');
 }
 
 /* ---------- header builders ---------- */
@@ -1541,10 +1636,13 @@ function buildDays(){
   const el=document.getElementById('days'); el.innerHTML='';
   FEST_DAYS.forEach(d=>{
     const p=document.createElement('div');
-    p.className='day-pill';
+    // Grid/List: day pills are scroll anchors, highlighted by scroll position
+    // (see updateActivePill()). Rows: they're a day filter instead, so the
+    // active pill is just whichever day matches rowsDay right now.
+    p.className='day-pill'+(scheduleView==='rows' && dayStr(d)===dayStr(rowsDay) ? ' active' : '');
     p.id='pill-'+dayStr(d);
     p.textContent=WD_SHORT[d.getDay()]+' '+d.getDate();
-    p.onclick=()=>scrollToDay(d);
+    p.onclick = scheduleView==='rows' ? ()=>{ rowsDay=d; render(); } : ()=>scrollToDay(d);
     el.appendChild(p);
   });
 }
@@ -1654,7 +1752,7 @@ function scrollToNow(){
     window.scrollTo({top:0, behavior:'smooth'});
     return;
   }
-  const nowEl=document.querySelector('.slot.now');
+  const nowEl=document.querySelector('.slot.now, .fav-card.now, .rows-block.now');
   if(nowEl){ scrollToY(nowEl.getBoundingClientRect().top + window.scrollY - 40); }
   else { scrollToDay(startOfDay(now)); }
 }
@@ -1668,6 +1766,11 @@ document.getElementById('homeLogo').addEventListener('click', ()=>{
 /* highlight the day pill matching current scroll position */
 let dividerEls=[];
 function updateActivePill(){
+  // Rows shows one day at a time and manages its own pill highlight (see
+  // buildDays()) — scroll-based highlighting doesn't apply there, and would
+  // fight with it (an empty dividerEls array would clear the active class
+  // buildDays() just set).
+  if(scheduleView==='rows') return;
   const threshold=stickyOffset()+20;
   let current=null;
   dividerEls.forEach(el=>{
@@ -1686,7 +1789,7 @@ function updateActivePill(){
   }
 }
 function updateBackToNowBtn(){
-  const nowEl=document.querySelector('.slot.now');
+  const nowEl=document.querySelector('.slot.now, .fav-card.now, .rows-block.now');
   const btn=document.getElementById('backToNowBtn');
   if(!nowEl){ btn.classList.remove('show'); return; }
   const rect=nowEl.getBoundingClientRect();
@@ -1730,14 +1833,26 @@ function render(){
   if(!q){ buildDays(); buildStageFilter(); }
   updateFavBadge();
 
+  // Rows renders inside its own fixed-height, self-scrolling box instead of
+  // flowing in the page-wide scroll main normally provides for Grid/List —
+  // main's big bottom padding (see CSS, reserved so the last Grid row can
+  // scroll clear of the floating "back to now" button) would otherwise just
+  // add dead space below that box. Toggled here (not inside
+  // renderRowsSchedule) so it's also cleared correctly when Rows is active
+  // but a search query is showing renderSearch() instead.
+  document.body.classList.toggle('view-rows', scheduleView==='rows' && !q);
+
   if(q){ renderSearch(main,q); requestAnimationFrame(updateStickyVars); return; }
+
+  if(scheduleView==='rows'){ renderRowsSchedule(main); return; }
+  if(scheduleView==='list'){ renderListSchedule(main); return; }
 
   const stages = STAGES.filter(s=>activeStages.has(s));
   const cols=stages.length;
   // minmax floor keeps columns legible instead of squeezing to illegibility
   // when many stages are active at once — the grid scrolls horizontally
   // (with snap, see .col-snap) past that point instead of shrinking further.
-  const tmpl=`54px repeat(${cols}, minmax(130px,1fr))`;
+  const tmpl=`45px repeat(${cols}, minmax(100px,1fr))`;
 
   const start=FEST.start.getTime();
   const end=FEST.end.getTime();
@@ -1770,7 +1885,7 @@ function render(){
     const t=new Date(start+si*SLOT*60000);
     if(t.getMinutes()===0){
       const r=gridRowStart(t);
-      body+=`<div class="time-cell" style="grid-row:${r} / span 2; grid-column:1;">${fmt(t)}</div>`;
+      body+=`<div class="time-cell" style="grid-row:${r} / span 2; grid-column:1;">${fmtHour(t)}</div>`;
     }
   }
 
@@ -1833,6 +1948,137 @@ function render(){
 
   dividerEls=[...document.querySelectorAll('.day-divider')];
   requestAnimationFrame(()=>{ updateStickyVars(); updateActivePill(); });
+}
+
+/* ---------- List view: flat chronological list across all active stages,
+   styled after the official Ozora app. FLAT_ACTS is grouped per-stage (built
+   by iterating STAGES then DATA[s]), not sorted across stages, so it must be
+   re-sorted by start time here — skipping that would silently regroup the
+   list back by stage. ---------- */
+function renderListSchedule(main){
+  const items = FLAT_ACTS.filter(({stage,e})=>activeStages.has(stage)&&e.type==='act')
+    .slice()
+    .sort((a,b)=>new Date(a.e.start)-new Date(b.e.start));
+  if(!items.length){ main.innerHTML='<div class="empty-note">No acts to show.</div>'; return; }
+
+  const now=new Date();
+  let html='';
+  let lastDay=null;
+  items.forEach(({stage:s,e})=>{
+    const idx=DATA[s].indexOf(e);
+    const cls=slotClass(s);
+    const d=new Date(e.start);
+    const ds=dayStr(d);
+    if(ds!==lastDay){
+      lastDay=ds;
+      const label=WD_LONG[d.getDay()]+', '+d.getDate()+' '+MO_LONG[d.getMonth()];
+      html+=`<div class="day-divider" id="divider-${ds}" data-day="${ds}">
+        <div class="divider-bar"><svg viewBox="0 0 24 24" class="divider-icon"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>${label}</div>
+      </div>`;
+    }
+    const isNow = now>=new Date(e.start) && now<new Date(e.end);
+    html+=`<div class="fav-card list-row ${cls}${isNow?' now':''}" style="--sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" data-stage="${s}" data-idx="${idx}" onclick="openArtistByIndex('${s}',${idx})">
+      <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
+      <div class="sub">${fmt(e.start)}–${fmt(e.end)} · <span class="list-row-stage" style="color:var(--sc)">${escapeHtml(s)}</span></div>
+      ${isNow?'<span class="now-tag">NOW</span>':''}
+    </div>`;
+  });
+  main.innerHTML=html;
+
+  dividerEls=[...document.querySelectorAll('.day-divider')];
+  requestAnimationFrame(()=>{ updateStickyVars(); updateActivePill(); });
+}
+
+/* ---------- Rows view: Boom Festival-style stage rows with a horizontal
+   time axis, one day at a time (rowsDay). Design decision: an event belongs
+   entirely to the calendar day it STARTS on, even if it runs past midnight
+   (e.g. a 23:30->01:00 set is shown in full under its start day) — verified
+   against real data (both Ozora and Space Safari have genuine
+   midnight-crossing sets). This sidesteps Grid's cuts/points/isCont
+   day-boundary-splitting machinery entirely, which only exists because Grid
+   shows every day at once; Rows never needs it since only one day is ever
+   on screen. ---------- */
+function renderRowsSchedule(main){
+  const dayStart = Math.max(rowsDay.getTime(), FEST.start.getTime());
+  const dayEndNominal = Math.min(rowsDay.getTime()+24*3600000, FEST.end.getTime());
+  const stages = STAGES.filter(s=>activeStages.has(s));
+  const dayItems = stages.map(s=>({ s, acts: DATA[s].filter(e=>{
+    const t=new Date(e.start).getTime();
+    return t>=dayStart && t<dayEndNominal;
+  }) }));
+  if(!dayItems.some(({acts})=>acts.length)){
+    main.innerHTML='<div class="empty-note">No acts to show.</div>';
+    return;
+  }
+
+  // Axis end stretches past dayEndNominal when a set starts before midnight
+  // and runs past it (see the design decision above) — otherwise its block
+  // would be clipped by the axis instead of showing its real end time.
+  const axisStart = dayStart;
+  const axisEnd = Math.max(dayEndNominal, ...dayItems.flatMap(({acts})=>acts.map(e=>new Date(e.end).getTime())));
+  const nSlots = Math.ceil((axisEnd-axisStart)/(SLOT*60000));
+  const slotIdx = t => Math.round((new Date(t).getTime()-axisStart)/(SLOT*60000));
+
+  const tmpl=`92px repeat(${nSlots}, minmax(46px,1fr))`;
+  const now=new Date();
+
+  let body=`<div class="rows-sched-wrap"><div class="rows-grid" style="grid-template-columns:${tmpl}; grid-template-rows:34px repeat(${stages.length}, minmax(56px,auto));">`;
+  // sticky-on-both-axes corner, so neither the hour header nor the stage
+  // column ever shows through underneath it while scrolling diagonally
+  body+=`<div class="rows-corner"></div>`;
+
+  // one scroll-snap anchor per column, mirroring Grid's .col-snap (there,
+  // rows are the snap axis; here, columns are, since time runs horizontally)
+  for(let si=0; si<=nSlots; si++){
+    body+=`<div class="row-snap" style="grid-column:${si+2};"></div>`;
+  }
+
+  // hour header — compact fmtHour() labels only, same as Grid's time rail
+  for(let si=0; si<nSlots; si++){
+    const t=new Date(axisStart+si*SLOT*60000);
+    if(t.getMinutes()===0){
+      body+=`<div class="rows-hour-cell" style="grid-column:${si+2}; grid-row:1;">${fmtHour(t)}</div>`;
+    }
+  }
+
+  // stage rows: sticky name cell in column 1, event blocks placed by
+  // grid-column (the time-axis transposition of Grid's grid-row placement)
+  dayItems.forEach(({s,acts},ri)=>{
+    const cls=slotClass(s);
+    const gr=ri+2;
+    body+=`<div class="rows-stage-cell" style="grid-row:${gr}; color:var(--stage-${cls});">${escapeHtml(s)}</div>`;
+    acts.forEach(e=>{
+      const idx=DATA[s].indexOf(e);
+      const c0=slotIdx(e.start), c1=slotIdx(e.end);
+      const span=Math.max(1, c1-c0);
+      const colStyle=`grid-column:${c0+2} / span ${span}; grid-row:${gr}; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);`;
+      if(e.type==='act'){
+        const isNow = now>=new Date(e.start) && now<new Date(e.end);
+        body+=`<div class="rows-block act ${cls}${isNow?' now':''}" data-stage="${s}" data-idx="${idx}" style="${colStyle}" onclick="openArtistByIndex('${s}',${idx})">
+          <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
+          <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+          ${isNow?'<span class="now-tag">NOW</span>':''}
+        </div>`;
+      } else if(e.type==='break'){
+        body+=`<div class="rows-block break" style="${colStyle}"><div class="nm">${e.act}</div></div>`;
+      } else if(FESTIVAL_CONFIG.specialSlotType.enabled && e.type===FESTIVAL_CONFIG.specialSlotType.type){
+        body+=`<div class="rows-block special" style="${colStyle}">
+          <div class="sun"></div><div class="nm">${FESTIVAL_CONFIG.specialSlotType.label}</div>
+          <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+        </div>`;
+      }
+    });
+  });
+
+  body+=`</div></div>`;
+  main.innerHTML=body;
+
+  // Rows shows a single day at a time, not the whole festival — there are no
+  // day-divider elements for updateActivePill()/scrollToDay() to anchor to,
+  // and updateActivePill() already early-returns for scheduleView==='rows'
+  // (buildDays() manages the active day-pill directly there instead).
+  dividerEls=[];
+  requestAnimationFrame(()=>{ updateStickyVars(); });
 }
 
 /* ---------- search view ---------- */
@@ -3233,7 +3479,7 @@ function renderInstallSection(){
     ? 'Look for <strong>Add to Home Screen</strong> or <strong>Install app</strong> in your browser’s menu.'
     : isIOSSafari()
       ? 'Tap the <strong>•••</strong> button, then <strong>Share</strong>, then <strong>Add to Home Screen</strong>. If you don’t see that option right away, tap <strong>Show More</strong> first.'
-      : 'iOS only allows installing to your Home Screen from <strong>Safari</strong>. Open this page in Safari, then follow these steps again.';
+      : 'iOS only allows bookmarking this app to your Home Screen from <strong>Safari</strong>. Open this page in Safari, and follow the steps on the settings page.';
 }
 document.getElementById('installBtn').onclick=async ()=>{
   if(!deferredInstallPrompt) return;
@@ -3438,6 +3684,18 @@ function buildSchemePicker(){
 }
 buildSchemePicker();
 
+// "Offline use" collapses behind a summary toggle button too, same
+// expand/collapse pattern as the Color scheme picker above — the
+// always-visible paragraphs were too much vertical space on a phone
+// settings screen (found via live iPhone testing).
+const offlineToggle=document.getElementById('offlineUseToggle');
+const offlinePanel=document.getElementById('offlineUsePanel');
+if(offlineToggle) offlineToggle.onclick=()=>{
+  const open=offlinePanel.hasAttribute('hidden');
+  if(open) offlinePanel.removeAttribute('hidden'); else offlinePanel.setAttribute('hidden','');
+  offlineToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+};
+
 /* settings — font size */
 let fontSize = (() => { try{ return localStorage.getItem('festapp_font') || 'md'; }catch(e){ return 'md'; } })();
 function applyFontSize(size){
@@ -3478,6 +3736,23 @@ document.querySelectorAll('.font-size-btn[data-timeformat]').forEach(btn=>{
     if(document.getElementById('favOverlay').classList.contains('show')) renderFavorites();
     if(document.getElementById('nowPlayingOverlay').classList.contains('show')) renderNowPlaying();
     if(_weatherData && document.getElementById('weatherOverlay').classList.contains('show')) renderWeatherOverlay(_weatherData);
+  };
+});
+
+/* settings — schedule view (grid default; list ships in Phase 1, rows ships
+   in Phase 2). Same active-class/localStorage/re-render pattern as time format. */
+function applyScheduleView(view){
+  document.querySelectorAll('.font-size-btn[data-scheduleview]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.scheduleview===view);
+  });
+}
+applyScheduleView(scheduleView);
+document.querySelectorAll('.font-size-btn[data-scheduleview]').forEach(btn=>{
+  btn.onclick=()=>{
+    scheduleView=btn.dataset.scheduleview;
+    try{ localStorage.setItem('festapp_scheduleview', scheduleView); }catch(e){}
+    applyScheduleView(scheduleView);
+    render();
   };
 });
 
