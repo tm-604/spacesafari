@@ -1,0 +1,16 @@
+{
+  "name": "Space Safari — Lineup",
+  "short_name": "Space Safari",
+  "description": "Space Safari — full lineup, weather and favorites.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14001F",
+  "theme_color": "#14001F",
+  "icons": [
+    { "src": "icon-192-light.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-light.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable-light.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
