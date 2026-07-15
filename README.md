@@ -1,5 +1,7 @@
 # Space Safari — Lineup
 
+**👉 Open the app: https://tm-604.github.io/spacesafari/**
+
 An unofficial companion app for **Space Safari Festival 2026** (4–6 September, Massembre, Belgium) — a fast, offline-first way to browse the full lineup, build your schedule, and not miss the sets you care about.
 
 ## Features
@@ -9,7 +11,7 @@ An unofficial companion app for **Space Safari Festival 2026** (4–6 September,
 - **Reminders** — get notified before a set starts, or export it straight to your phone's calendar
 - **Live weather** — current conditions plus an 8-day forecast for the festival site
 - **Artist info** — bios, photos, genres, and links to Spotify, Bandcamp, YouTube, SoundCloud, Instagram, Facebook, and Discogs where available
-- **Discovery mode** — browse artists you haven't checked out yet, or let the app surprise you with one according to the artists favorited
+- **Discovery mode** — browse artists you haven't explored yet, or let the app surprise you with a suggestion based on the acts you've already favorited
 - **Compare with friends** — see which sets you and your crew all want to catch
 - **Dark/light theme**, plus a full color-scheme picker if the default isn't your vibe
 - **Works offline** — install it once and it keeps working all festival long, no signal needed
