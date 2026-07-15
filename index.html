@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#14001F">
+<meta name="theme-color" content="#120726">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon-180-light.png">
+<link rel="apple-touch-icon" href="./icon-180.png">
 <!-- Home-screen icon (manifest.json) is one static file — no OS-theme
      switching mechanism exists for installed-PWA icons. The browser-TAB
      favicon below is different: it CAN follow OS light/dark mode via
@@ -622,7 +622,19 @@ body.theme-light .pill-badge{background:rgba(255,255,255,0.85); box-shadow:0 0 0
   scroll-snap-type:x mandatory; -ms-overflow-style:none; scrollbar-width:none;
 }
 .rows-sched-wrap::-webkit-scrollbar{display:none;}
-.rows-grid{display:grid; gap:5px; padding-bottom:20px; position:relative;}
+/* width:max-content is load-bearing, not cosmetic: a block-level grid
+   container with the default width:auto fills its scroll-parent's client
+   width and lets its (wider) track content overflow that box unclipped —
+   which is what makes .rows-sched-wrap scrollable at all. But that also
+   means the grid's own border box (the sticky containing block for its
+   sticky children) stays capped at the *visible* width instead of the full
+   scrollable content width. Past that cap, sticky's "left:0" offset gets
+   clamped against the undersized containing block and drifts out of place
+   instead of staying pinned — confirmed live (.rows-stage-cell/.rows-corner
+   visibly detached from the left edge once scrolled). width:max-content
+   sizes the grid to its actual track content so the containing block is
+   never smaller than what's scrollable. */
+.rows-grid{display:grid; width:max-content; gap:5px; padding-bottom:20px; position:relative;}
 .rows-corner{
   grid-row:1; grid-column:1; position:sticky; top:0; left:0; z-index:7; background:var(--night);
 }
@@ -2027,10 +2039,22 @@ function renderRowsSchedule(main){
   // column ever shows through underneath it while scrolling diagonally
   body+=`<div class="rows-corner"></div>`;
 
-  // one scroll-snap anchor per column, mirroring Grid's .col-snap (there,
-  // rows are the snap axis; here, columns are, since time runs horizontally)
-  for(let si=0; si<=nSlots; si++){
-    body+=`<div class="row-snap" style="grid-column:${si+2};"></div>`;
+  // scroll-snap anchors at each HOUR boundary, mirroring Grid's .col-snap
+  // (there, rows are the snap axis; here, columns are, since time runs
+  // horizontally) — one anchor per hour, not per SLOT (30 min), so snapping
+  // stays coarse enough to feel natural instead of fighting every scroll
+  // gesture. Column 1 (the sticky stage-name rail) needs its own anchor
+  // too — without one, scroll position 0 isn't a valid snap point and the
+  // browser jumps the initial scroll to the first hour anchor instead,
+  // shoving the sticky rail on top of that column's content (same failure
+  // mode Grid's own comment on .col-snap documents for the mirror-image
+  // bug).
+  body+=`<div class="row-snap" style="grid-column:1;"></div>`;
+  for(let si=0; si<nSlots; si++){
+    const t=new Date(axisStart+si*SLOT*60000);
+    if(t.getMinutes()===0){
+      body+=`<div class="row-snap" style="grid-column:${si+2};"></div>`;
+    }
   }
 
   // hour header — compact fmtHour() labels only, same as Grid's time rail
