@@ -1605,14 +1605,13 @@ function updateFavBadge(){
 // Default stays 24-hour for everyone unless a user manually opts into
 // 12-hour via Settings — never auto-detected from browser/OS locale.
 let timeFormat = (() => { try{ return localStorage.getItem('festapp_timeformat') || '24'; }catch(e){ return '24'; } })();
-// Schedule view: 'grid' (default for <=3 stages), 'rows' (Phase 2, Boom-style
-// stage rows — default for 4+ stages), or 'list' (flat chronological list
-// across stages). The stage-count fallback only applies to users who have
-// never touched the Settings switch — an explicit localStorage choice always
-// wins.
+// Schedule view: 'grid', 'rows' (Phase 2, Boom-style stage rows), or 'list'
+// (flat chronological list). Space Safari intentionally defaults to Grid view
+// (overriding the shared engine's "4+ stages → Rows" default), but an explicit
+// localStorage choice (Settings switch) always wins.
 let scheduleView = (()=>{
   try{ const v=localStorage.getItem('festapp_scheduleview'); if(v==='rows'||v==='list'||v==='grid') return v; }catch(e){}
-  return STAGES.length>=4 ? 'rows' : 'grid';
+  return 'grid';
 })();
 function fmt(iso){
   const d=new Date(iso);
