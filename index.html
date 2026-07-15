@@ -417,10 +417,6 @@ body{
 .scheme-picker-toggle-name{flex:1; font-family:var(--font-display); font-weight:600; font-size:0.875rem; color:var(--ink);}
 .scheme-picker-chevron{width:16px; height:16px; stroke:var(--ink-dim); fill:none; stroke-width:2; flex-shrink:0; transition:transform .15s;}
 .scheme-picker-toggle[aria-expanded="true"] .scheme-picker-chevron{transform:rotate(180deg);}
-/* Offline-use toggle restyled as a bold full-width action button (like .fav-backup-btn)
-   with centered text and no chevron icon. */
-#offlineUseToggle{justify-content:center;}
-#offlineUseToggle .scheme-picker-toggle-name{color:inherit;}
 .scheme-picker-panel{margin-top:10px;}
 .scheme-picker-panel[hidden]{display:none;}
 .font-size-btn:nth-child(1){font-size:0.6875rem;}
@@ -1136,6 +1132,23 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   </div>
 </div>
 
+<!-- Offline use / Install app overlay. Opened by the Settings "Offline use /
+     Install app" button (offlineUseBtn), mirroring the Save/Restore Favorites
+     sheet. Holds the moved intro line, the iOS 7-day #offlineIosWarning (still
+     the clone-source for the install-nudge popup), the platform install-step
+     text (#installInstructions), and the native Android #installBtn. -->
+<div class="overlay" id="offlineUseOverlay">
+  <div class="sheet" id="offlineUseSheet">
+    <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
+    <button class="close" data-close>×</button>
+    <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:14px;">Offline use / Install app</h2>
+    <div class="fav-backup-label">This app is designed to work offline. For the best experience, add it to your home screen.</div>
+    <div class="fav-backup-label" id="offlineIosWarning"><strong>Warning:</strong> if you don't install this app and just use it in your browser, iOS may automatically clear your saved favorites and checkmarks after about <strong>7 days</strong> without opening the page — an iOS privacy restriction, not something this app controls. "Installing" (bookmarking) this page to your home screen avoids this entirely.</div>
+    <div class="fav-backup-label" id="installInstructions" style="display:none;"></div>
+    <button class="fav-backup-btn" id="installBtn" style="display:none;">Install app</button>
+  </div>
+</div>
+
 <!-- Compare with friends overlay -->
 <div class="overlay" id="compareOverlay">
   <div class="sheet" id="compareSheet">
@@ -1300,15 +1313,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
         </div>
       </div>
       <div class="settings-group">
-        <button class="scheme-picker-toggle fav-backup-btn" id="offlineUseToggle" aria-expanded="false" style="width:100%;">
-          <span class="scheme-picker-toggle-name">Offline use / Install app</span>
-        </button>
-        <div id="offlineUsePanel" class="scheme-picker-panel" hidden>
-          <div class="fav-backup-label">This app is designed to work offline. For the best experience, add it to your home screen.</div>
-          <div class="fav-backup-label" id="offlineIosWarning"><strong>Warning:</strong> if you don't install this app and just use it in your browser, iOS may automatically clear your saved favorites and checkmarks after about <strong>7 days</strong> without opening the page — an iOS privacy restriction, not something this app controls. "Installing" (bookmarking) this page to your home screen avoids this entirely.</div>
-          <div class="fav-backup-label" id="installInstructions" style="display:none;"></div>
-          <button class="fav-backup-btn" id="installBtn" style="display:none;">Install app</button>
-        </div>
+        <button class="fav-backup-btn" id="offlineUseBtn">Offline use / Install app</button>
       </div>
       <div class="settings-group">
         <div class="settings-group-label">Data &amp; Privacy</div>
@@ -1344,7 +1349,8 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
     <h2 class="artist-name install-nudge-heading" style="font-size:1.25rem; margin-bottom:10px;">WARNING!</h2>
     <div class="fav-backup-label" id="installNudgeIosWarning" style="display:none;"></div>
     <div class="fav-backup-label" id="installNudgeInstructions"></div>
-    <button class="fav-backup-btn fav-backup-btn-secondary" id="installNudgeDismissBtn">Not now</button>
+    <div class="fav-backup-label">If you ignore this now, you can find these instructions again on the Settings page.</div>
+    <button class="fav-backup-btn fav-backup-btn-secondary" id="installNudgeDismissBtn">Ok</button>
   </div>
 </div>
 
@@ -1358,7 +1364,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
     <button class="close" data-close>×</button>
     <h2 class="artist-name install-nudge-heading" style="font-size:1.25rem; margin-bottom:10px;">Heads up!</h2>
     <div class="fav-backup-label">This app is designed primarily for phones. On a Mac, Safari's built-in privacy protections may automatically clear your locally-saved favorites and checkmarks after about <strong>7 days</strong> without opening this page. To prevent this, save your favorites manually on the Settings page.</div>
-    <button class="fav-backup-btn fav-backup-btn-secondary" id="desktopSafariWarningDismissBtn">Not now</button>
+    <button class="fav-backup-btn fav-backup-btn-secondary" id="desktopSafariWarningDismissBtn">Ok</button>
   </div>
 </div>
 
@@ -3624,16 +3630,29 @@ function isOfflineUseSectionShown(){
 // where beforeinstallprompt just hasn't fired yet). Called when Settings
 // opens, and again if beforeinstallprompt fires while Settings happens to
 // already be open — see the listener further up.
+// Button-group visibility for the Settings "Offline use / Install app" entry.
+// The button opens the offlineUseOverlay sheet and is only shown on a phone
+// that hasn't installed yet — on desktop / when already installed the whole
+// group is hidden, so the overlay it opens stays unreachable (exactly as the
+// old inline section was hidden). Called when Settings opens and again if
+// beforeinstallprompt fires; also refreshes the overlay sheet content so a
+// beforeinstallprompt arriving while the sheet is open swaps in the native
+// Install button live.
 function renderInstallSection(){
+  const openBtn=document.getElementById('offlineUseBtn');
+  const group=openBtn ? openBtn.closest('.settings-group') : null;
+  if(group) group.style.display = isOfflineUseSectionShown() ? '' : 'none';
+  populateOfflineUseSheet();
+}
+// Populates the Offline-use overlay sheet content: a real native Install
+// button when a deferredInstallPrompt is available, otherwise the platform-
+// specific manual install-step copy. (The iOS 7-day #offlineIosWarning and
+// the intro line are static markup, gated separately.) Runs when the button
+// opens the sheet, and from renderInstallSection().
+function populateOfflineUseSheet(){
   const instr=document.getElementById('installInstructions');
   const btn=document.getElementById('installBtn');
   if(!instr || !btn) return;
-  const group=btn.closest('.settings-group');
-  if(!isOfflineUseSectionShown()){
-    if(group) group.style.display='none';
-    return;
-  }
-  if(group) group.style.display='';
   if(deferredInstallPrompt){
     btn.style.display='block';
     instr.style.display='none';
@@ -3649,11 +3668,14 @@ document.getElementById('installBtn').onclick=async ()=>{
   const {outcome}=await deferredInstallPrompt.userChoice;
   if(outcome==='accepted'){
     // The current tab isn't itself the newly-installed window, so
-    // isStandalone() won't flip true here — hide the whole group directly
-    // instead of relying on isStandalone() to re-derive that state.
+    // isStandalone() won't flip true here — hide the Offline-use button's
+    // group directly (and close the now-orphaned overlay) instead of relying
+    // on isStandalone() to re-derive that state.
     deferredInstallPrompt=null;
-    const group=document.getElementById('installBtn').closest('.settings-group');
+    const openBtn=document.getElementById('offlineUseBtn');
+    const group=openBtn ? openBtn.closest('.settings-group') : null;
     if(group) group.style.display='none';
+    hideOverlay(document.getElementById('offlineUseOverlay'));
   }
   // On dismissal, deferredInstallPrompt is deliberately kept (not nulled)
   // so the button stays available to try again.
@@ -3906,17 +3928,13 @@ function buildSchemePicker(){
 }
 buildSchemePicker();
 
-// "Offline use" collapses behind a summary toggle button too, same
-// expand/collapse pattern as the Color scheme picker above — the
-// always-visible paragraphs were too much vertical space on a phone
-// settings screen (found via live iPhone testing).
-const offlineToggle=document.getElementById('offlineUseToggle');
-const offlinePanel=document.getElementById('offlineUsePanel');
-if(offlineToggle) offlineToggle.onclick=()=>{
-  const open=offlinePanel.hasAttribute('hidden');
-  if(open) offlinePanel.removeAttribute('hidden'); else offlinePanel.setAttribute('hidden','');
-  offlineToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-};
+// "Offline use / Install app" opens a modal overlay sheet (like "Save /
+// Restore Favorites"), not an inline accordion — populate the sheet's
+// install content fresh, then show it. The button is only visible on a phone
+// that hasn't installed yet (see renderInstallSection()); on desktop /
+// installed it's hidden, so the overlay stays unreachable.
+const offlineUseBtn=document.getElementById('offlineUseBtn');
+if(offlineUseBtn) offlineUseBtn.onclick=()=>{ populateOfflineUseSheet(); showOverlay('offlineUseOverlay'); };
 
 /* settings — font size */
 let fontSize = (() => { try{ return localStorage.getItem('festapp_font') || 'md'; }catch(e){ return 'md'; } })();
@@ -3973,6 +3991,15 @@ document.querySelectorAll('.font-size-btn[data-scheduleview]').forEach(btn=>{
   btn.onclick=()=>{
     scheduleView=btn.dataset.scheduleview;
     try{ localStorage.setItem('festapp_scheduleview', scheduleView); }catch(e){}
+    // Rows is the full stage-rows overview, so selecting it re-checks every
+    // stage: repopulate activeStages with all STAGES (same label-string key
+    // format the chips use) and refresh the chip UI so they all show active.
+    // Explicit per-stage de-selection afterward is still allowed. Only 'rows'
+    // resets — Grid/List leave activeStages exactly as the user had it.
+    if(scheduleView==='rows'){
+      activeStages = new Set(STAGES);
+      buildStageFilter();
+    }
     applyScheduleView(scheduleView);
     render();
   };
