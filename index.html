@@ -530,6 +530,11 @@ main{padding:14px 8px 55vh 8px;}
    button) would just add dead page-scroll space beneath that box. Toggled
    in render() alongside the scheduleView dispatch. */
 body.view-rows main{padding:14px 8px 14px 8px;}
+/* ROWS_MULTIDAY_SCROLL (approach B): Rows scrolls in the normal page like
+   Grid/List (each day its own horizontal strip), so restore the big bottom
+   padding that lets the last day clear the floating "back to now" button.
+   More specific than the rule above, so it wins whenever both classes are on. */
+body.rows-multiday.view-rows main{padding:14px 8px 55vh 8px;}
 
 .sched{
   display:grid; gap:5px; padding-bottom:20px;
@@ -622,6 +627,19 @@ body.theme-light .pill-badge{background:rgba(255,255,255,0.85); box-shadow:0 0 0
   scroll-snap-type:x mandatory; -ms-overflow-style:none; scrollbar-width:none;
 }
 .rows-sched-wrap::-webkit-scrollbar{display:none;}
+/* ROWS_MULTIDAY_SCROLL (approach B): each festival day is its own horizontal
+   scroller inside the normal page vertical scroll (no fixed-height self-scroll
+   box). overflow-x:auto gives per-day horizontal time scrolling; the strip's
+   height equals its content, so vertical overflow never actually scrolls (no
+   clipping) — this keeps each strip's sticky hour header (top:0) and sticky
+   stage column (left:0) resolving against the STRIP, avoiding the nested-sticky
+   problem the single-box model was built to dodge. */
+body.rows-multiday .rows-day-strip{
+  overflow-x:auto; scroll-snap-type:x mandatory;
+  -ms-overflow-style:none; scrollbar-width:none;
+}
+body.rows-multiday .rows-day-strip::-webkit-scrollbar{display:none;}
+body.rows-multiday .day-divider{margin-top:8px;}
 /* width:max-content is load-bearing, not cosmetic: a block-level grid
    container with the default width:auto fills its scroll-parent's client
    width and lets its (wider) track content overflow that box unclipped —
@@ -692,6 +710,10 @@ body.cols-1 .slot .sub{font-size:0.75rem;}
   background:rgba(6,7,13,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
 }
 .overlay.show{display:block;}
+/* The Offline-use / Install overlay is opened as a nested panel ON TOP of the
+   Settings sheet (Settings stays open underneath), so it must stack above the
+   base .overlay z-index:60 — otherwise it renders below Settings. */
+#offlineUseOverlay{ z-index:70; }
 .sheet{
   position:absolute; left:0; right:0; bottom:0; top:auto;
   max-height:92vh; overflow-y:auto; overflow-x:hidden;
@@ -1619,6 +1641,10 @@ let scheduleView = (()=>{
   try{ const v=localStorage.getItem('festapp_scheduleview'); if(v==='rows'||v==='list'||v==='grid') return v; }catch(e){}
   return 'grid';
 })();
+// If the app opens in Rows view (the full stage-rows overview), start with every
+// stage checked — mirrors the select-Rows handler so first launch shows all rows,
+// not the width-based Grid subset. Grid/List keep the defaultActiveStages() subset.
+if(scheduleView==='rows'){ activeStages = new Set(STAGES); }
 function fmt(iso){
   const d=new Date(iso);
   const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0');
@@ -1671,8 +1697,19 @@ function festDays(){
   return days;
 }
 const FEST_DAYS = festDays();
-// Rows view shows one day at a time; defaults to "today" if the festival is
-// currently running, else the first festival day.
+// ROWS_MULTIDAY_SCROLL — true selects approach B (the default): the Rows view
+// renders EVERY festival day stacked vertically, each day its own horizontal
+// stage-rows strip with a day divider, so you scroll vertically through the
+// days (like Grid/List) and horizontally within a day. Flip to FALSE to fully
+// restore the previous one-day-at-a-time Rows behavior (day pills act as a day
+// FILTER, a single day on screen). Every divergent path is gated on this one
+// constant — renderRowsSchedule(), buildDays(), updateActivePill(), the rowsDay
+// role, and the body.rows-multiday CSS class — so flipping it back is clean.
+const ROWS_MULTIDAY_SCROLL = true;
+// rowsDay defaults to "today" if the festival is currently running, else the
+// first festival day. When ROWS_MULTIDAY_SCROLL is false it's the single day
+// the Rows view filters to; when true it's the day the view auto-scrolls to on
+// entering Rows.
 let rowsDay = FEST_DAYS.find(d=>dayStr(d)===dayStr(new Date())) || FEST_DAYS[0];
 
 /* ---------- sticky heights for scroll offset math ---------- */
@@ -1693,13 +1730,15 @@ function buildDays(){
   const el=document.getElementById('days'); el.innerHTML='';
   FEST_DAYS.forEach(d=>{
     const p=document.createElement('div');
-    // Grid/List: day pills are scroll anchors, highlighted by scroll position
-    // (see updateActivePill()). Rows: they're a day filter instead, so the
-    // active pill is just whichever day matches rowsDay right now.
-    p.className='day-pill'+(scheduleView==='rows' && dayStr(d)===dayStr(rowsDay) ? ' active' : '');
+    // Grid/List (and Rows when ROWS_MULTIDAY_SCROLL): day pills are scroll
+    // anchors, highlighted by scroll position (see updateActivePill()). Only the
+    // legacy single-day Rows path (flag false) uses them as a day FILTER, with
+    // the active pill being whichever day matches rowsDay right now.
+    const rowsFilterPills = !ROWS_MULTIDAY_SCROLL && scheduleView==='rows';
+    p.className='day-pill'+(rowsFilterPills && dayStr(d)===dayStr(rowsDay) ? ' active' : '');
     p.id='pill-'+dayStr(d);
     p.textContent=WD_SHORT[d.getDay()]+' '+d.getDate();
-    p.onclick = scheduleView==='rows' ? ()=>{ rowsDay=d; render(); } : ()=>scrollToDay(d);
+    p.onclick = rowsFilterPills ? ()=>{ rowsDay=d; render(); } : ()=>scrollToDay(d);
     el.appendChild(p);
   });
 }
@@ -1823,11 +1862,13 @@ document.getElementById('homeLogo').addEventListener('click', ()=>{
 /* highlight the day pill matching current scroll position */
 let dividerEls=[];
 function updateActivePill(){
-  // Rows shows one day at a time and manages its own pill highlight (see
-  // buildDays()) — scroll-based highlighting doesn't apply there, and would
-  // fight with it (an empty dividerEls array would clear the active class
-  // buildDays() just set).
-  if(scheduleView==='rows') return;
+  // Legacy single-day Rows (ROWS_MULTIDAY_SCROLL false) shows one day at a time
+  // and manages its own pill highlight (see buildDays()) — scroll-based
+  // highlighting doesn't apply there and would fight with it (an empty
+  // dividerEls array would clear the active class buildDays() just set). With
+  // the flag on, Rows renders every day with real dividers, so it highlights by
+  // scroll position exactly like Grid/List.
+  if(!ROWS_MULTIDAY_SCROLL && scheduleView==='rows') return;
   const threshold=stickyOffset()+20;
   let current=null;
   dividerEls.forEach(el=>{
@@ -2056,6 +2097,10 @@ function renderListSchedule(main){
    shows every day at once; Rows never needs it since only one day is ever
    on screen. ---------- */
 function renderRowsSchedule(main){
+  // Approach B: render every festival day stacked vertically in the normal page
+  // scroll. Gated so flipping ROWS_MULTIDAY_SCROLL to false cleanly restores the
+  // single-day (rowsDay-filtered) render below with no leftovers.
+  if(ROWS_MULTIDAY_SCROLL){ renderRowsScheduleMultiday(main); return; }
   const dayStart = Math.max(rowsDay.getTime(), FEST.start.getTime());
   const dayEndNominal = Math.min(rowsDay.getTime()+24*3600000, FEST.end.getTime());
   const stages = STAGES.filter(s=>activeStages.has(s));
@@ -2148,6 +2193,108 @@ function renderRowsSchedule(main){
   // (buildDays() manages the active day-pill directly there instead).
   dividerEls=[];
   requestAnimationFrame(()=>{ updateStickyVars(); });
+}
+
+/* ---------- Rows view, approach B (ROWS_MULTIDAY_SCROLL): every festival day
+   stacked vertically. Each day is a self-contained horizontal strip (its own
+   overflow-x scroller with sticky hour header + sticky stage-name column),
+   preceded by the same .day-divider Grid/List use — so scrollToDay(),
+   scrollToNow(), updateActivePill() and dividerEls all work here unchanged. The
+   per-day axis math (an act belongs to the day it STARTS on; the axis stretches
+   past midnight to a set's real end) is identical to the single-day render, just
+   looped over FEST_DAYS. ---------- */
+function renderRowsScheduleMultiday(main){
+  const stages = STAGES.filter(s=>activeStages.has(s));
+  const now=new Date();
+  let html='';
+  let anyActs=false;
+  FEST_DAYS.forEach(d=>{
+    const dayStart = Math.max(d.getTime(), FEST.start.getTime());
+    const dayEndNominal = Math.min(d.getTime()+24*3600000, FEST.end.getTime());
+    const dayItems = stages.map(s=>({ s, acts: DATA[s].filter(e=>{
+      const t=new Date(e.start).getTime();
+      return t>=dayStart && t<dayEndNominal;
+    }) }));
+    const hasActs = dayItems.some(({acts})=>acts.length);
+    if(hasActs) anyActs=true;
+
+    const label=WD_LONG[d.getDay()]+', '+d.getDate()+' '+MO_LONG[d.getMonth()];
+    html+=`<div class="day-divider" id="divider-${dayStr(d)}" data-day="${dayStr(d)}">
+      <div class="divider-bar"><svg viewBox="0 0 24 24" class="divider-icon"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>${label}</div>
+    </div>`;
+
+    // Keep a divider for EVERY festival day (so each day pill has a scroll
+    // anchor) even if the active-stage filter leaves this day empty.
+    if(!hasActs){
+      html+=`<div class="empty-note">No acts on this day.</div>`;
+      return;
+    }
+
+    // Axis end stretches past dayEndNominal when a set starts before midnight and
+    // runs past it (design decision: an act belongs to its start day) — otherwise
+    // its block would be clipped by the axis instead of showing its real end.
+    const axisStart = dayStart;
+    const axisEnd = Math.max(dayEndNominal, ...dayItems.flatMap(({acts})=>acts.map(e=>new Date(e.end).getTime())));
+    const nSlots = Math.ceil((axisEnd-axisStart)/(SLOT*60000));
+    const slotIdx = t => Math.round((new Date(t).getTime()-axisStart)/(SLOT*60000));
+    const tmpl=`92px repeat(${nSlots}, minmax(46px,1fr))`;
+
+    let body=`<div class="rows-day-strip"><div class="rows-grid" style="grid-template-columns:${tmpl}; grid-template-rows:34px repeat(${stages.length}, minmax(56px,auto));">`;
+    // sticky-on-both-axes corner within THIS strip (top:0 has no vertical effect
+    // since the strip only scrolls horizontally; left:0 pins it over the hour
+    // header's left edge while the stage column scrolls behind).
+    body+=`<div class="rows-corner"></div>`;
+    // per-hour scroll-snap anchors + a column-1 anchor (same reasoning as the
+    // single-day render: without a col-1 anchor, scroll pos 0 isn't a valid snap
+    // point and the sticky rail gets shoved onto the first hour's content).
+    body+=`<div class="row-snap" style="grid-column:1;"></div>`;
+    for(let si=0; si<nSlots; si++){
+      const t=new Date(axisStart+si*SLOT*60000);
+      if(t.getMinutes()===0){ body+=`<div class="row-snap" style="grid-column:${si+2};"></div>`; }
+    }
+    // hour header row (not page-sticky: a day strip is short, so an hour header
+    // pinned to the top of each strip suffices).
+    for(let si=0; si<nSlots; si++){
+      const t=new Date(axisStart+si*SLOT*60000);
+      if(t.getMinutes()===0){ body+=`<div class="rows-hour-cell" style="grid-column:${si+2}; grid-row:1;">${fmtHour(t)}</div>`; }
+    }
+    dayItems.forEach(({s,acts},ri)=>{
+      const cls=slotClass(s);
+      const gr=ri+2;
+      body+=`<div class="rows-stage-cell" style="grid-row:${gr}; color:var(--stage-${cls});">${escapeHtml(s)}</div>`;
+      acts.forEach(e=>{
+        const idx=DATA[s].indexOf(e);
+        const c0=slotIdx(e.start), c1=slotIdx(e.end);
+        const span=Math.max(1, c1-c0);
+        const colStyle=`grid-column:${c0+2} / span ${span}; grid-row:${gr}; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);`;
+        if(e.type==='act'){
+          const isNow = now>=new Date(e.start) && now<new Date(e.end);
+          body+=`<div class="rows-block act ${cls}${isNow?' now':''}" data-stage="${s}" data-idx="${idx}" style="${colStyle}" onclick="openArtistByIndex('${s}',${idx})">
+            <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
+            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+            ${isNow?'<span class="now-tag">NOW</span>':''}
+          </div>`;
+        } else if(e.type==='break'){
+          body+=`<div class="rows-block break" style="${colStyle}"><div class="nm">${escapeHtml(e.act)}</div></div>`;
+        } else if(FESTIVAL_CONFIG.specialSlotType.enabled && e.type===FESTIVAL_CONFIG.specialSlotType.type){
+          body+=`<div class="rows-block special" style="${colStyle}">
+            <div class="sun"></div><div class="nm">${FESTIVAL_CONFIG.specialSlotType.label}</div>
+            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+          </div>`;
+        }
+      });
+    });
+    body+=`</div></div>`;
+    html+=body;
+  });
+
+  if(!anyActs){ main.innerHTML='<div class="empty-note">No acts to show.</div>'; return; }
+  main.innerHTML=html;
+
+  // Real dividers now live in the normal page scroll, so reuse Grid/List's
+  // day-anchor machinery verbatim.
+  dividerEls=[...document.querySelectorAll('.day-divider')];
+  requestAnimationFrame(()=>{ updateStickyVars(); updateActivePill(); });
 }
 
 /* ---------- search view ---------- */
@@ -2532,7 +2679,7 @@ function restoreFavCode(code){
     // no "|" (old-style, or nothing was checked when it was generated) must
     // never touch any existing checked data
     if(barIdx!==-1){
-      const checkedIdxs=rankDecode(trimmed.slice(barIdx+1), n);
+      const checkedIdxs=rankDecode(trimmed.split('|')[1], n);
       if(checkedIdxs && checkedIdxs.length){
         checkedIdxs.forEach(idx=>{ checked.add(favKey(FLAT_ACTS[idx].stage, FLAT_ACTS[idx].e)); });
         saveChecked();
@@ -3527,6 +3674,9 @@ document.getElementById('clearBtn').onclick=()=>{ document.getElementById('searc
 
 /* ---------- init ---------- */
 reconcileStoredKeys();
+// Drive Rows-view CSS off a single body class so ROWS_MULTIDAY_SCROLL is the one
+// switch (JS gates behavior, this class gates the CSS).
+document.body.classList.toggle('rows-multiday', ROWS_MULTIDAY_SCROLL);
 updateStickyVars();
 render();
 requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ scrollToNow(); updateBackToNowBtn(); }); });
@@ -4002,6 +4152,12 @@ document.querySelectorAll('.font-size-btn[data-scheduleview]').forEach(btn=>{
     }
     applyScheduleView(scheduleView);
     render();
+    // Approach B: entering Rows auto-scrolls to rowsDay (today, or the first day
+    // pre-festival), reusing the same day-anchor scroll Grid/List use. Legacy
+    // single-day Rows (flag false) needs no scroll — it swaps the whole view.
+    if(ROWS_MULTIDAY_SCROLL && scheduleView==='rows'){
+      requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToDay(rowsDay)));
+    }
   };
 });
 
