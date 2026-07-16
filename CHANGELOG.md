@@ -2,6 +2,17 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.4.0 — July 2026
+
+- New: filter and sort artists by genre in both Favorites and Discovery.
+
+## Version 1.3.0 — July 2026
+
+- New: Surprise me now factors in the artists you've rated ▲ Love, not just your favorites — and tells you why it picked who it picked.
+- New: sort the Discovery list by rating, not just by time.
+- New: add a private note to any artist — visible only to you, never shared.
+- Renamed rating labels for clarity: ▲ Love, ● Like, ▼ Not for me.
+
 ## Version 1.2.0 — July 2026
 
 - New: back-to-back sets are now clearly marked, with links to each artist when available.
