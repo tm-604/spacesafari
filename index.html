@@ -462,6 +462,13 @@ body.font-lg .fav-card .nm{font-size:1rem;}
 body.font-xl .slot .nm, body.font-xl .rows-block .nm{font-size:1.25rem;}
 body.font-xl.cols-1 .slot .nm{font-size:1.375rem;}
 body.font-xl .fav-card .nm{font-size:1.25rem;}
+/* .sub stayed pinned to the base 0.6875rem at every font-size setting even
+   as .nm scaled up to 1.25rem at xl, reading as visually mismatched next to
+   a much bigger name (flagged during the Fase-A review's font-xl check).
+   One modest step up (not the full .nm ratio — a subtitle shouldn't compete
+   with the name) keeps proportion without overwhelming the line. */
+body.font-xl .slot .sub, body.font-xl .rows-block .sub{font-size:0.8125rem;}
+body.font-xl .fav-card .sub{font-size:0.8125rem;}
 
 .fav-count{
   position:absolute; top:-6px; right:-6px; min-width:16px; height:16px; padding:0 3px;
@@ -564,7 +571,7 @@ body.rows-multiday.view-rows main{padding:14px 8px 55vh 8px;}
   position:relative; z-index:1;
 }
 .slot.empty{background:transparent; border:none;}
-.slot .nm, .rows-block .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink); overflow-wrap:break-word;}
+.slot .nm, .rows-block .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink); overflow-wrap:break-word; hyphens:auto; -webkit-hyphens:auto;}
 .slot .sub, .rows-block .sub{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:3px;}
 
 /* Stage-tinted background/border for act slots — reads the --sc-rgb custom
@@ -744,6 +751,9 @@ body.cols-1 .slot .sub{font-size:0.75rem;}
 /* Opens from inside the Settings sheet -> same z-index:70 lift as the others. */
 #discoveryIntroOverlay{ z-index:70; }
 #dataPrivacyOverlay{ z-index:70; }
+/* Note-to-self opens from the artist panel (base z-index:60) -> same 70 lift. */
+#noteOverlay{ z-index:70; }
+
 /* Plain classic text link under the version line — normal foreground colour
    (NOT an accent colour, so it stays legible in both themes) + underline is the
    only "clickable" signal. display:block puts it on its own line below
@@ -901,6 +911,25 @@ body:not([data-checkmarks="on"]) #ratingGlyphSlot{display:none;}
 .rating-glyph-2{color:var(--rating-liked);}
 .rating-glyph-1{color:var(--heart);}
 .rating-glyph:active{opacity:0.7;}
+/* "Note to self" indicator — sits in the same flex lead as the rating glyph,
+   styled to match its 30px box. Dim when empty, full when a note exists. */
+#noteSlot{display:inline-flex; align-items:center; flex:0 0 auto;}
+#noteSlot.hidden{display:none;}
+.note-indicator{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  min-width:30px; height:30px; padding:0 7px; border-radius:8px; cursor:pointer;
+  font-size:0.9375rem; line-height:1;
+  background:var(--night-2); border:1px solid var(--line); opacity:0.5;
+}
+.note-indicator.has-note{opacity:1; border-color:var(--ink-dim);}
+.note-indicator:active{opacity:0.7;}
+.note-input{
+  width:100%; box-sizing:border-box; margin-bottom:6px; padding:10px 12px;
+  border-radius:10px; border:1px solid var(--line); background:var(--night-2); color:var(--ink);
+  font-family:var(--font-display); font-size:0.95rem;
+}
+.note-charcount{font-family:var(--font-mono); font-size:0.6875rem; color:var(--ink-dim); text-align:right; margin-bottom:12px;}
+
 /* Back-to-back / collab combined-act component links — a small block near the
    bio (see combinedActLinksHtml()). Reuses .discovery-chip/.rating-lead
    exactly rather than inventing new chip styling; .b2b-plain is the graceful-
@@ -1044,6 +1073,9 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   border:1px solid var(--line); background:var(--night-2); color:var(--ink-dim); cursor:pointer;
 }
 .discovery-chip.active{border-color:var(--ink); color:var(--night); background:var(--ink);}
+/* one-line "why this pick" reason under the Surprise-me reveal card only —
+   reuses the .sub look (mono, dim). Never rendered in the day-grouped list. */
+.discovery-pick-reason{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:8px; line-height:1.4;}
 .stage-chip.any-stage.active{border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent);}
 .discovery-count-note{font-size:0.8125rem; color:var(--ink-dim); padding:2px 2px 10px;}
 .discovery-surprise-wrap{margin:6px 0 16px;}
@@ -1061,7 +1093,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   background:rgba(var(--sc-rgb),0.13); border-color:rgba(var(--sc-rgb),0.22);
 }
 .fav-card:active{filter:brightness(1.25);}
-.fav-card .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink);}
+.fav-card .nm{font-family:var(--font-display); font-weight:600; font-size:0.8125rem; line-height:1.2; color:var(--ink); overflow-wrap:break-word; hyphens:auto; -webkit-hyphens:auto;}
 .fav-card .sub{font-family:var(--font-mono); font-size:0.6875rem; font-weight:500; color:var(--ink-dim); margin-top:3px;}
 
 /* List view: flat chronological rows, one per line (no clustering like
@@ -1319,7 +1351,25 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   </div>
 </div>
 
-<!-- What's new / changelog overlay. Opened by tapping the Settings "Version X"
+<!-- "Note to self" overlay. Opened from the 📝 indicator beside a checked
+     artist's name (see renderRatingUI / openNoteModal). Same .overlay > .sheet
+     chrome as the Offline-use sheet (grab handle, close button, backdrop-click +
+     swipe + Escape dismissal for free); lifted to z-index:70 to paint above the
+     artist panel it opens from. The note is autosaved on blur and on close. -->
+<div class="overlay" id="noteOverlay">
+  <div class="sheet" id="noteSheet">
+    <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
+    <button class="close" data-close>×</button>
+    <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:6px;">Note to self</h2>
+    <div class="fav-backup-label" id="noteArtistName" style="font-weight:600; margin-bottom:10px;"></div>
+    <input type="text" id="noteInput" class="note-input" maxlength="140" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false" placeholder="A private note about this artist…">
+    <div class="note-charcount"><span id="noteCharCount">0</span>/140</div>
+    <div class="fav-backup-label">Notes stay on this device only — they're never included in the friends share code.</div>
+  </div>
+</div>
+
+<!-- What's new / changelog overlay.
+ Opened by tapping the Settings "Version X"
      line (aboutAppLine). Same .overlay > .sheet chrome as the Offline-use sheet
      (grab handle, close button, backdrop-click + swipe-to-dismiss for free),
      lifted to z-index:70 so it stacks above the Settings sheet it opens from. -->
@@ -1499,7 +1549,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
         </div>
       </div>
       <div class="settings-group">
-        <div class="settings-group-label">Data &amp; Privacy</div>
+        <div class="settings-group-label">Backup &amp; Storage</div>
         <div class="fav-backup-label" id="dataPrivacyInstallPara">Installing the app locally will make sure your settings and favorites will be saved. In case you want to use the app online in your browser, make sure to back up your favorites manually below in case your browser data ever gets cleared.</div>
         <button class="fav-backup-btn fav-backup-btn-secondary" id="openFavFromSettingsBtn">Save / Restore Favorites</button>
       </div>
@@ -1559,7 +1609,8 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
     <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
     <button class="close" data-close>×</button>
     <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:14px;">Data &amp; Privacy</h2>
-    <div class="fav-backup-label">Your favorites, reminders, discovery checkmarks, ratings, and settings stay only on this device — never uploaded, with no account, sign-in, or tracking. To work, the app makes just two outside requests: it loads its fonts and fetches the weather forecast for the festival site. Neither sends your favorites or any personal data.</div>
+    <div class="fav-backup-label">Your favorites, reminders, discovery checkmarks, ratings, notes, and settings stay only on this device
+ — never uploaded, with no account, sign-in, or tracking. To work, the app makes just two outside requests: it loads its fonts and fetches the weather forecast for the festival site. Neither sends your favorites or any personal data.</div>
   </div>
 </div>
 
@@ -1678,7 +1729,8 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
+
 
 /* User-facing changelog shown by the "What's new" tap on the Settings version
    line (renderChangelog() / #changelogOverlay). Plain-language, benefit-first,
@@ -1687,9 +1739,15 @@ const APP_VERSION = '1.2.0';
    fully offline and is precached with the app. Each fork carries its OWN entries
    here, matching that fork's own APP_VERSION history. */
 const CHANGELOG = [
+  { version:'1.3.0', date:'July 2026', notes:[
+    'New: add a private “Note to self” on any artist you’ve explored — it stays on this device and is never part of the friends share code.',
+    'Surprise me now also leans toward artists you rated ▲ Loved it, and tells you why it picked each one.',
+    'New: sort your Discovery list by your rating, not just by time.'
+  ] },
   { version:'1.2.0', date:'July 2026', notes:[
     'New: back-to-back sets are now clearly marked, with links to each artist when available.'
   ] },
+
   { version:'1.1.0', date:'July 2026', notes:[
     'New: rate the artists you explore — mark each one ▲ Loved it, ● Liked it, or ▼ Not for me.',
     'New: carry your ratings across festival apps — export them here, then import them into another festival’s app.',
@@ -2179,7 +2237,18 @@ function render(){
   // minmax floor keeps columns legible instead of squeezing to illegibility
   // when many stages are active at once — the grid scrolls horizontally
   // (with snap, see .col-snap) past that point instead of shrinking further.
-  const tmpl=`45px repeat(${cols}, minmax(100px,1fr))`;
+  // At font-xl, .nm jumps to 1.25rem (vs the 0.8125rem base) — the 100px
+  // floor that's plenty for base-size names caused frequent mid-word wraps
+  // (see Fase-A review). Widen the floor and trim the sticky time rail
+  // (unaffected by font-size — its own hour labels never scale) to give the
+  // bigger text more room without changing anything at non-xl sizes.
+  // Reads localStorage directly (not the module-level `fontSize` let) because
+  // render()'s first call happens before that later declaration initializes —
+  // referencing it here threw "Cannot access 'fontSize' before initialization".
+  let isXlFont=false; try{ isXlFont = localStorage.getItem('festapp_font')==='xl'; }catch(e){}
+  const timeColW = isXlFont ? 38 : 45;
+  const nameColMin = isXlFont ? 132 : 100;
+  const tmpl=`${timeColW}px repeat(${cols}, minmax(${nameColMin}px,1fr))`;
 
   const start=FEST.start.getTime();
   const end=FEST.end.getTime();
@@ -2629,7 +2698,9 @@ function openArtist(stage,e){
       <div class="artist-name-lead">
         <h2 class="artist-name">${escapeHtml(e.act)}</h2>
         <span id="ratingGlyphSlot"></span>
+        <span id="noteSlot" class="hidden"></span>
       </div>
+
       <div class="artist-actions">
         <button class="bell-toggle${isReminded(stage,e)?' reminded':''}" id="bellBtn" aria-label="Reminder">${BELL_SVG}</button>
         <button class="check-toggle${isChecked(stage,e)?' checked':''}" id="checkBtn" aria-label="Mark as explored">${CHECK_SVG}</button>
@@ -2705,7 +2776,22 @@ function openArtist(stage,e){
     row.querySelectorAll('.rating-chip').forEach(ch=>{
       ch.classList.toggle('active', Number(ch.dataset.rating)===r);
     });
+    // "Note to self" indicator beside the name — same gate as the rating row:
+    // only when checkmarks are on AND this artist is checked (rated or not).
+    const noteSlot=document.getElementById('noteSlot');
+    if(noteSlot){
+      if(checkedNow){
+        noteSlot.classList.remove('hidden');
+        const has=!!getNote(e);
+        noteSlot.innerHTML=`<button type="button" class="note-indicator${has?' has-note':''}" id="noteIndicatorBtn" aria-label="Note to self" title="Note to self">📝</button>`;
+        document.getElementById('noteIndicatorBtn').onclick=()=>openNoteModal(e);
+      } else {
+        noteSlot.classList.add('hidden');
+        noteSlot.innerHTML='';
+      }
+    }
   }
+
   renderRatingUI();
   document.getElementById('checkBtn').onclick=()=>{
     toggleChecked(stage,e);
@@ -3097,7 +3183,29 @@ function setRating(e, r){
   else { delete ratings[k]; }
   saveRatings(); saveRatingNames();
 }
+/* ---------- "Note to self" — a private, on-device free-text note per artist ----------
+   Same artist identity as ratings (ratingKey(e): mb:<mbid> or nm:<name>), NOT
+   per-slot. Stored in its own festapp_notes map. Capped at 140 chars, single
+   line, trimmed; empty removes the entry. Notes NEVER travel in the friends
+   share code (favCode) — only in the separate cross-festival ratings JSON
+   export channel. Setting a note also stamps the existing ratingNames map so an
+   export always carries a display name even if the artist was never rated. */
+let notes=loadNotes();
+function loadNotes(){
+  try{ const o=JSON.parse(localStorage.getItem('festapp_notes')||'{}'); return (o && typeof o==='object' && !Array.isArray(o)) ? o : {}; }
+  catch(err){ return {}; }
+}
+function saveNotes(){ try{ localStorage.setItem('festapp_notes', JSON.stringify(notes)); }catch(err){} }
+function getNote(e){ return notes[ratingKey(e)] || ''; }
+function setNote(e, text){
+  const k=ratingKey(e);
+  text=(text||'').slice(0,140).replace(/\s+/g,' ').trim();
+  if(text){ notes[k]=text; if(e && e.act) ratingNames[k]=e.act; }
+  else { delete notes[k]; }
+  saveNotes(); saveRatingNames();
+}
 // Shared compact rating glyphs — 3=▲ Loved it, 2=● Liked it, 1=▼ Not for me.
+
 // Used by the artist panel (collapsed glyph), the schedule pill-badges and the
 // Discovery filter so the symbol/colour language stays identical everywhere.
 const RATING_GLYPHS={1:'▼',2:'●',3:'▲'};
@@ -3328,7 +3436,8 @@ function buildRatingsExport(){
     const r=ratings[k];
     if(r!==1 && r!==2 && r!==3) return;
     const name = ratingNames[k] || LOCAL_NAME_BY_KEY[k] || k.replace(/^(mb:|nm:)/,'');
-    out.push({ key:k, name, r, comment:'' });
+    out.push({ key:k, name, r, comment: notes[k] || '' });
+
   });
   return { type:RATINGS_EXPORT_TYPE, v:RATINGS_EXPORT_V, exported:new Date().toISOString(), ratings:out };
 }
@@ -3351,9 +3460,16 @@ function importRatingsJSON(text){
     imported++;
     if(ratings[ent.key]==null) ratings[ent.key]=r;                 // LOCAL WINS
     if(typeof ent.name==='string' && ent.name && !ratingNames[ent.key]) ratingNames[ent.key]=ent.name;
+    // "Note to self" travels in the reserved comment field — same LOCAL WINS
+    // rule: only fill it in when this device has no note for that artist yet.
+    if(typeof ent.comment==='string' && ent.comment && !notes[ent.key]){
+      const nc=ent.comment.slice(0,140).replace(/\s+/g,' ').trim();
+      if(nc) notes[ent.key]=nc;
+    }
     if(localKeys.has(ent.key)) matched++;
   });
-  saveRatings(); saveRatingNames();
+  saveRatings(); saveRatingNames(); saveNotes();
+
   return {ok:true, imported, matched};
 }
 document.getElementById('ratingsExportBtn').onclick=()=>{
@@ -3511,19 +3627,21 @@ function reconcileStoredKeys(){
   reconcile(reminded,  saveReminded);
   reconcile(checked,   saveChecked);
 
-  /* Map-variant heal for the per-artist ratings map. Because the cross-festival
-     import stores FOREIGN artist keys in this same map (the "ledger"), a fuzzy
-     Levenshtein heal like the Set-key one above could wrongly merge a foreign
-     entry into a similarly-named local artist and destroy ledger data. So this
-     heal is deliberately restricted to the SAFE, unambiguous case: an orphaned
-     "nm:" key whose normalized name is IDENTICAL to exactly one current artist
-     (e.g. that artist gained an mbid, changing its key from nm: to mb:). That
-     is also exactly how cross-festival matching treats identical normalized
-     names — the same artist — so the migration is consistent. Existing value on
-     the destination wins; ambiguous (2+) matches are left untouched. */
-  (function healRatings(){
+  /* Map-variant heal for the per-artist ratings AND notes maps (both keyed by
+     ratingKey). Because the cross-festival import stores FOREIGN artist keys in
+     these same maps (the "ledger"), a fuzzy Levenshtein heal like the Set-key
+     one above could wrongly merge a foreign entry into a similarly-named local
+     artist and destroy ledger data. So this heal is deliberately restricted to
+     the SAFE, unambiguous case: an orphaned "nm:" key whose normalized name is
+     IDENTICAL to exactly one current artist (e.g. that artist gained an mbid,
+     changing its key from nm: to mb:). That is also exactly how cross-festival
+     matching treats identical normalized names — the same artist — so the
+     migration is consistent. Existing value on the destination wins; ambiguous
+     (2+) matches are left untouched. The shared parallel ratingNames map follows
+     the healed key so a display name is never orphaned. */
+  function healArtistKeyedMap(map, saveFn){
     const currentKeys=new Set(ARTIST_KEYS);
-    // normalized-name -> set of current rating keys with that exact name
+    // normalized-name -> set of current artist keys with that exact name
     const byNorm={};
     const seen=new Set();
     FLAT_ACTS.forEach(a=>{
@@ -3533,21 +3651,24 @@ function reconcileStoredKeys(){
       (byNorm[nm]=byNorm[nm]||new Set()).add(key);
     });
     let changed=false;
-    for(const oldKey of Object.keys(ratings)){
+    for(const oldKey of Object.keys(map)){
       if(currentKeys.has(oldKey)) continue;      // still valid — not orphaned
       if(oldKey.slice(0,3)!=='nm:') continue;    // only name-based keys are healed
       const cand=byNorm[oldKey.slice(3)];
       if(!cand || cand.size!==1) continue;       // fail-safe: no match or ambiguous
       const newKey=[...cand][0];
       if(newKey===oldKey) continue;
-      if(ratings[newKey]==null) ratings[newKey]=ratings[oldKey];  // existing wins
-      delete ratings[oldKey];
+      if(map[newKey]==null) map[newKey]=map[oldKey];  // existing wins
+      delete map[oldKey];
       if(ratingNames[oldKey]!=null){ if(ratingNames[newKey]==null) ratingNames[newKey]=ratingNames[oldKey]; delete ratingNames[oldKey]; }
       changed=true;
     }
-    if(changed){ saveRatings(); saveRatingNames(); }
-  })();
+    if(changed){ saveFn(); saveRatingNames(); }
+  }
+  healArtistKeyedMap(ratings, saveRatings);
+  healArtistKeyedMap(notes, saveNotes);
 }
+
 
 /* ---------- Discovery screen: a tab inside the Favorites overlay, only
    reachable when the opt-in "Discovery checkmarks" Settings feature is on.
@@ -3558,6 +3679,7 @@ let favView='favorites'; // 'favorites' | 'discovery' — resets to favorites ev
 let discoveryActiveStages=new Set(STAGES);
 let discoveryExploreFilter='unexplored'; // 'all' | 'unexplored' | 'explored' — unexplored is the useful default
 let discoveryRatingFilter='any'; // 'any'|'3'|'2'|'1'|'unrated' — non-persistent, only used under the 'explored' filter
+let discoverySortMode='date'; // 'date'|'rating' — non-persistent; only surfaced/honoured outside the 'unexplored' filter
 let surpriseSelectedStage=null; // null = any stage
 
 function switchFavView(view){
@@ -3576,42 +3698,60 @@ document.querySelectorAll('.font-size-btn[data-fav-view]').forEach(btn=>{
   btn.onclick=()=>switchFavView(btn.dataset.favView);
 });
 
-/* Collects lowercase genre tokens from the user's own favorited artists —
-   same '/' separator convention filterByTag()/openArtist() already use for
-   this field (see FESTIVAL_CONFIG.artistInfoFields / SEPS.genre_full). */
-function favoriteGenreTokens(){
-  const tokens=new Set();
+/* Traceable taste signal for Surprise-me: lowercase genre tokens drawn from
+   the user's own favorited artists (kind:'favorite') AND from artists rated
+   ▲ "Loved it" (getRating===3, kind:'rating'). Returns a
+   Map<token, Array<{name, kind}>> so a later pick can be traced back to *why*
+   it was boosted (see explainPick()). Same '/' separator convention
+   filterByTag()/openArtist() already use for this field (see
+   FESTIVAL_CONFIG.artistInfoFields / SEPS.genre_full). Deduped per
+   (token,name,kind) triple — one artist can sit on several slots. */
+function discoverySignalTokens(){
+  const map=new Map();
+  const add=(token,name,kind)=>{
+    let arr=map.get(token);
+    if(!arr){ arr=[]; map.set(token,arr); }
+    if(!arr.some(c=>c.name===name && c.kind===kind)) arr.push({name,kind});
+  };
   STAGES.forEach(s=>DATA[s].forEach(e=>{
-    if(e.type==='act' && isFav(s,e) && e.genre_full){
-      e.genre_full.split('/').map(t=>t.trim().toLowerCase()).filter(Boolean).forEach(t=>tokens.add(t));
-    }
+    if(e.type!=='act' || !e.genre_full) return;
+    const fav=isFav(s,e), loved=getRating(e)===3;
+    if(!fav && !loved) return;
+    const tokens=e.genre_full.split('/').map(t=>t.trim().toLowerCase()).filter(Boolean);
+    tokens.forEach(t=>{
+      if(fav) add(t,e.act,'favorite');
+      if(loved) add(t,e.act,'rating');
+    });
   }));
-  return tokens;
+  return map;
 }
 /* Weighted-random pick for "Surprise me": base weight 1 for every not-yet-
    checked, not-yet-favorited candidate (optionally narrowed to one stage) —
    favorited acts are excluded from the pool entirely since the user already
    knows about them, so there's nothing to "surprise" them with; candidates
-   sharing at least one genre token with the user's favorited artists get
-   ×3 — enough to meaningfully bias the pick toward "more of what you
-   already like" without making it deterministic. Falls back to plain
+   sharing at least one genre token with the user's taste signal (favorited
+   OR ▲-loved artists, see discoverySignalTokens()) get ×3 — enough to
+   meaningfully bias the pick toward "more of what you already like" without
+   making it deterministic. Also records which tokens matched per candidate
+   (matchedTokens) so the reveal can explain the pick. Falls back to plain
    uniform random automatically whenever there's no genre overlap in the
    pool (every weight stays 1), and returns null only when the pool itself
    is empty. */
 const DISCOVERY_GENRE_WEIGHT_MULTIPLIER=3;
 function weightedPickArtist(stageFilter){
-  const favTokens=favoriteGenreTokens();
+  const signal=discoverySignalTokens();
   const pool=[];
   STAGES.forEach(s=>{
     if(stageFilter && s!==stageFilter) return;
     DATA[s].forEach(e=>{
       if(e.type!=='act' || isChecked(s,e) || isFav(s,e)) return;
-      let weight=1;
-      if(favTokens.size && e.genre_full){
+      let weight=1, matchedTokens=[];
+      if(signal.size && e.genre_full){
         const tokens=e.genre_full.split('/').map(t=>t.trim().toLowerCase()).filter(Boolean);
-        if(tokens.some(t=>favTokens.has(t))) weight*=DISCOVERY_GENRE_WEIGHT_MULTIPLIER;
+        matchedTokens=tokens.filter(t=>signal.has(t));
+        if(matchedTokens.length) weight*=DISCOVERY_GENRE_WEIGHT_MULTIPLIER;
       }
-      pool.push({s,e,weight});
+      pool.push({s,e,weight,matchedTokens});
     });
   });
   if(!pool.length) return null;
@@ -3622,6 +3762,27 @@ function weightedPickArtist(stageFilter){
     if(r<=0) return c;
   }
   return pool[pool.length-1]; // float-rounding safety net
+}
+/* One-line "why this pick" sentence for the Surprise-me reveal, built from a
+   pick's matchedTokens + the signal map. Picks the most SPECIFIC token (most
+   words; alphabetical tiebreak), then a contributor for it — preferring a
+   'favorite' (the heart is the app's primary mental model), else the first
+   'rating'. Returns null when there is no signal, so the reveal stays silent
+   rather than inventing a reason. */
+function explainPick(matchedTokens, signal){
+  if(!matchedTokens || !matchedTokens.length || !signal) return null;
+  const token=[...matchedTokens].sort((a,b)=>{
+    const wa=a.split(/\s+/).length, wb=b.split(/\s+/).length;
+    if(wa!==wb) return wb-wa;           // most words = most specific
+    return a<b?-1:(a>b?1:0);            // alphabetical tiebreak
+  })[0];
+  const contributors=signal.get(token);
+  if(!contributors || !contributors.length) return null;
+  const chosen=contributors.find(c=>c.kind==='favorite') || contributors.find(c=>c.kind==='rating');
+  if(!chosen) return null;
+  return chosen.kind==='favorite'
+    ? `Picked because you're into ${token} — like your favorite ${chosen.name}.`
+    : `Picked because you're into ${token} — like ${chosen.name}, which you rated ▲ Loved it.`;
 }
 function discoveryArtistCardHtml(s,e){
   const cls=slotClass(s);
@@ -3668,6 +3829,14 @@ function renderDiscovery(){
   const ratingChipsHtml = showRatingFilter ? ratingOptions.map(o=>
     `<div class="discovery-chip${discoveryRatingFilter===o.key?' active':''}" data-rating-filter="${o.key}">${o.label}</div>`
   ).join('') : '';
+  // sort toggle — same visibility gate as the rating filter (sorting by rating
+  // is meaningless in the all-unrated "Not yet explored" bucket). In 'rating'
+  // mode the list is flat (no day-headers, which are a chronological concept).
+  const useRatingSort = showRatingFilter && discoverySortMode==='rating';
+  const sortOptions=[{key:'date',label:'By date'},{key:'rating',label:'By rating'}];
+  const sortChipsHtml = showRatingFilter ? sortOptions.map(o=>
+    `<div class="discovery-chip${discoverySortMode===o.key?' active':''}" data-sort-mode="${o.key}">${o.label}</div>`
+  ).join('') : '';
 
   let hits=[];
   STAGES.forEach(s=>{
@@ -3685,7 +3854,15 @@ function renderDiscovery(){
       hits.push({s,e});
     });
   });
-  hits.sort((a,b)=>new Date(a.e.start)-new Date(b.e.start));
+  if(useRatingSort){
+    hits.sort((a,b)=>{
+      const rb=getRating(b.e)||0, ra=getRating(a.e)||0;
+      if(rb!==ra) return rb-ra;                        // highest rating first, unrated last
+      return new Date(a.e.start)-new Date(b.e.start);  // stable chronological secondary
+    });
+  } else {
+    hits.sort((a,b)=>new Date(a.e.start)-new Date(b.e.start));
+  }
 
   let listHtml='';
   if(!hits.length){
@@ -3693,11 +3870,13 @@ function renderDiscovery(){
   } else {
     let lastDay=null;
     hits.forEach(({s,e})=>{
-      const d=new Date(e.start);
-      const dk=dayStr(d);
-      if(dk!==lastDay){
-        listHtml+=`<div class="fav-day-label">${WD_LONG[d.getDay()]}, ${d.getDate()} ${MO_LONG[d.getMonth()]}</div>`;
-        lastDay=dk;
+      if(!useRatingSort){ // day-headers only make sense in chronological order
+        const d=new Date(e.start);
+        const dk=dayStr(d);
+        if(dk!==lastDay){
+          listHtml+=`<div class="fav-day-label">${WD_LONG[d.getDay()]}, ${d.getDate()} ${MO_LONG[d.getMonth()]}</div>`;
+          lastDay=dk;
+        }
       }
       listHtml+=discoveryArtistCardHtml(s,e);
     });
@@ -3707,11 +3886,12 @@ function renderDiscovery(){
     <div class="discovery-filter-row" id="discoveryStageChips">${stageChipsHtml}</div>
     <div class="discovery-filter-row" id="discoveryExploreChips">${exploreChipsHtml}</div>
     ${showRatingFilter?`<div class="discovery-filter-row" id="discoveryRatingChips">${ratingChipsHtml}</div>`:''}
+    ${showRatingFilter?`<div class="discovery-filter-row" id="discoverySortChips">${sortChipsHtml}</div>`:''}
     <div class="discovery-count-note">${hits.length} artist${hits.length!==1?'s':''}</div>
     <div class="discovery-surprise-wrap">
       <button class="fav-backup-btn fav-backup-btn-secondary" id="surpriseMeBtn" style="margin-bottom:0;">🎲 Surprise me</button>
       <div class="discovery-surprise-panel" id="surprisePickerPanel" style="display:none;">
-        <div class="fav-backup-label" id="surpriseExplainer">Pick a stage below and we'll surprise you with an artist you haven't explored yet — picked with a preference for genres you've already favorited.</div>
+        <div class="fav-backup-label" id="surpriseExplainer">Pick a stage below and we'll surprise you with an artist you haven't explored yet — picked with a preference for genres you've already favorited or loved.</div>
         <div class="discovery-filter-row" id="surpriseStageChips"></div>
         <button class="fav-backup-btn" id="surpriseRevealBtn" style="margin-bottom:0;">Reveal an artist</button>
         <div id="surpriseResult" style="margin-top:10px;"></div>
@@ -3744,6 +3924,12 @@ function renderDiscovery(){
       renderDiscovery();
     };
   });
+  body.querySelectorAll('#discoverySortChips .discovery-chip').forEach(el=>{
+    el.onclick=()=>{
+      discoverySortMode=el.dataset.sortMode;
+      renderDiscovery();
+    };
+  });
   const surpriseBtn=document.getElementById('surpriseMeBtn');
   const panel=document.getElementById('surprisePickerPanel');
   surpriseBtn.onclick=()=>{
@@ -3757,9 +3943,15 @@ function renderDiscovery(){
   document.getElementById('surpriseRevealBtn').onclick=()=>{
     const pick=weightedPickArtist(surpriseSelectedStage);
     const resultEl=document.getElementById('surpriseResult');
-    resultEl.innerHTML = pick
-      ? discoveryArtistCardHtml(pick.s,pick.e)
-      : `<div class="empty-note" style="padding:16px 4px;">You've explored everyone here!</div>`;
+    if(!pick){
+      resultEl.innerHTML=`<div class="empty-note" style="padding:16px 4px;">You've explored everyone here!</div>`;
+      return;
+    }
+    // reason line lives ONLY here, never in discoveryArtistCardHtml (shared with
+    // the day-grouped list); silent when there's no taste signal to explain it.
+    const reason=explainPick(pick.matchedTokens, discoverySignalTokens());
+    resultEl.innerHTML = discoveryArtistCardHtml(pick.s,pick.e)
+      + (reason?`<div class="discovery-pick-reason">${escapeHtml(reason)}</div>`:'');
   };
 }
 
@@ -4007,7 +4199,11 @@ function hideOverlay(el){
     clearInterval(nowPlayingRefreshTimer);
     nowPlayingRefreshTimer=null;
   }
+  // Guaranteed autosave when the note modal closes (belt-and-suspenders on top
+  // of the input's blur handler — covers any close path). Never touches favCode.
+  if(el.id==='noteOverlay' && typeof saveNoteFromInput==='function') saveNoteFromInput();
 }
+
 if(!FESTIVAL_CONFIG.map.enabled){
   document.getElementById('mapBtn').style.display='none';
 } else {
@@ -4843,6 +5039,49 @@ buildSchemePicker();
 const offlineUseBtn=document.getElementById('offlineUseBtn');
 if(offlineUseBtn) offlineUseBtn.onclick=()=>{ populateOfflineUseSheet(); showOverlay('offlineUseOverlay'); };
 
+/* ---------- "Note to self" modal ---------- */
+// Opened from the 📝 indicator on a checked artist's panel. Single-line input,
+// 140-char cap (enforced by maxlength AND setNote's slice), live char count,
+// autosaved on blur and on close (see hideOverlay). noteModalArtist holds the
+// act object the open panel is showing so the blur/close handlers know what to
+// write. Notes never enter favCode() — only the artist panel and the separate
+// ratings JSON export/import channel ever read or write them.
+let noteModalArtist=null;
+function updateNoteCharCount(){
+  const input=document.getElementById('noteInput');
+  const cc=document.getElementById('noteCharCount');
+  if(input && cc) cc.textContent=String(input.value.length);
+}
+function refreshNoteIndicator(e){
+  const btn=document.getElementById('noteIndicatorBtn');
+  if(btn) btn.classList.toggle('has-note', !!getNote(e));
+}
+function saveNoteFromInput(){
+  const input=document.getElementById('noteInput');
+  if(!input || !noteModalArtist) return;
+  setNote(noteModalArtist, input.value);
+  input.value=getNote(noteModalArtist); // reflect trim/collapse/cap back into the field
+  updateNoteCharCount();
+  refreshNoteIndicator(noteModalArtist);
+}
+function openNoteModal(e){
+  noteModalArtist=e;
+  const input=document.getElementById('noteInput');
+  const nameEl=document.getElementById('noteArtistName');
+  if(nameEl) nameEl.textContent=e.act;
+  if(input) input.value=getNote(e);
+  updateNoteCharCount();
+  showOverlay('noteOverlay');
+  if(input) setTimeout(()=>{ try{ input.focus(); }catch(_){} }, 60);
+}
+(function(){
+  const input=document.getElementById('noteInput');
+  if(!input) return;
+  input.addEventListener('input', updateNoteCharCount);
+  input.addEventListener('blur', saveNoteFromInput);
+})();
+
+
 /* settings — font size */
 let fontSize = (() => { try{ return localStorage.getItem('festapp_font') || 'md'; }catch(e){ return 'md'; } })();
 function applyFontSize(size){
@@ -5037,7 +5276,8 @@ if(isOfflineUseSectionShown()){
 }
 document.getElementById('openFavFromSettingsBtn').onclick=()=>{ hideOverlay(document.getElementById('settingsOverlay')); document.getElementById('favBtn').click(); document.getElementById('saveFavBtn').click(); };
 document.getElementById('resetAllDataBtn').onclick=()=>{
-  const ok=confirm('This will permanently erase your favorites, reminders, checkmarks, ratings, and settings on this device. This cannot be undone. Continue?');
+  const ok=confirm('This will permanently erase your favorites, reminders, checkmarks, ratings, notes, and settings on this device. This cannot be undone. Continue?');
+
   if(!ok) return;
   try{
     Object.keys(localStorage).forEach(k=>{ if(k.startsWith('festapp_')) localStorage.removeItem(k); });
