@@ -882,7 +882,8 @@ body:not([data-checkmarks="on"]) .pill-badge-rating{display:none;}
    hidden (.hidden) unless the artist on this slot is checked. Chips reuse the
    .discovery-chip look; active colors come from existing vars only. */
 body:not([data-checkmarks="on"]) #ratingRow,
-body:not([data-checkmarks="on"]) #ratingGlyphSlot{display:none;}
+body:not([data-checkmarks="on"]) #ratingGlyphSlot,
+body:not([data-checkmarks="on"]) #noteSlot{display:none;}
 #ratingRow{margin:0 0 14px;}
 #ratingRow.hidden, #ratingGlyphSlot.hidden{display:none;}
 .rating-lead{display:block; font-size:0.75rem; color:var(--ink-dim); margin-bottom:7px;}
@@ -1597,7 +1598,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
     <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
     <button class="close" data-close>×</button>
     <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:10px;">Artist Discovery is on</h2>
-    <div class="fav-backup-label">New on the artist pages: you can now mark the artists you’ve already checked out. Once you mark one, a rating option appears — ▲ Loved it, ● Liked it, or ▼ Not for me. Open any artist and go explore!</div>
+    <div class="fav-backup-label">New on the artist pages: you can now mark the artists you’ve already checked out, and rate any artist right away — ▲ Love, ● Like, or ▼ Not for me. Open any artist and go explore!</div>
     <button class="fav-backup-btn" id="discoveryIntroDismissBtn">Got it</button>
   </div>
 </div>
@@ -1741,7 +1742,7 @@ const APP_VERSION = '1.3.0';
 const CHANGELOG = [
   { version:'1.3.0', date:'July 2026', notes:[
     'New: add a private “Note to self” on any artist you’ve explored — it stays on this device and is never part of the friends share code.',
-    'Surprise me now also leans toward artists you rated ▲ Loved it, and tells you why it picked each one.',
+    'Surprise me now also leans toward artists you rated ▲ Love, and tells you why it picked each one.',
     'New: sort your Discovery list by your rating, not just by time.'
   ] },
   { version:'1.2.0', date:'July 2026', notes:[
@@ -1749,7 +1750,7 @@ const CHANGELOG = [
   ] },
 
   { version:'1.1.0', date:'July 2026', notes:[
-    'New: rate the artists you explore — mark each one ▲ Loved it, ● Liked it, or ▼ Not for me.',
+    'New: rate the artists you explore — mark each one ▲ Love, ● Like, or ▼ Not for me.',
     'New: carry your ratings across festival apps — export them here, then import them into another festival’s app.',
     'Cleaned up and improved artist descriptions across the lineup.'
   ] },
@@ -2698,7 +2699,7 @@ function openArtist(stage,e){
       <div class="artist-name-lead">
         <h2 class="artist-name">${escapeHtml(e.act)}</h2>
         <span id="ratingGlyphSlot"></span>
-        <span id="noteSlot" class="hidden"></span>
+        <span id="noteSlot"></span>
       </div>
 
       <div class="artist-actions">
@@ -2707,11 +2708,11 @@ function openArtist(stage,e){
         <button class="heart-toggle${fav?' fav':''}" id="heartBtn" aria-label="Favorite">${HEART_SVG}</button>
       </div>
     </div>
-    <div id="ratingRow"${isChecked(stage,e)?'':' class="hidden"'}>
+    <div id="ratingRow"${getRating(e)?' class="hidden"':''}>
       <span class="rating-lead">Rate this artist</span>
       <div class="rating-chips">
-        <button class="rating-chip${getRating(e)===3?' active':''}" data-rating="3">▲ Loved it</button>
-        <button class="rating-chip${getRating(e)===2?' active':''}" data-rating="2">● Liked it</button>
+        <button class="rating-chip${getRating(e)===3?' active':''}" data-rating="3">▲ Love</button>
+        <button class="rating-chip${getRating(e)===2?' active':''}" data-rating="2">● Like</button>
         <button class="rating-chip${getRating(e)===1?' active':''}" data-rating="1">▼ Not for me</button>
       </div>
     </div>
@@ -2750,20 +2751,26 @@ function openArtist(stage,e){
   document.querySelectorAll('#artistBody .b2b-chip[data-b2b-extra-key]').forEach(btn=>{
     btn.onclick=()=>{ openExtraArtist(btn.dataset.b2bExtraKey); };
   });
-  // Rating UI has two shapes inside a checked artist: the "Rate this artist"
-  // chip row (when unrated, or when the user taps the glyph to change it) and,
-  // once a rating is set, a compact colored glyph beside the name with the chip
-  // row collapsed. `ratingExpanded` tracks which is showing for this panel.
+  // Rating UI has two shapes: the "Rate this artist" chip row (when unrated,
+  // or when the user taps the glyph to change it) and, once a rating is set,
+  // a compact colored glyph beside the name with the chip row collapsed.
+  // `ratingExpanded` tracks which is showing for this panel. Neither this nor
+  // the note indicator below requires the artist to be checked first anymore
+  // — both are available as soon as "Mark & rate artists" is on, on every
+  // artist page (that master on/off toggle is handled by the body
+  // [data-checkmarks] CSS gate on #ratingRow/#ratingGlyphSlot/#noteSlot, not
+  // by this function). Rating one still auto-checks it (see the chip click
+  // handler below) — that direction stayed; only the "must check before you
+  // can even see the rating/note option" requirement went, for both.
   let ratingExpanded = getRating(e) ? false : true; // rated -> collapsed; unrated -> chips
   function renderRatingUI(){
     const row=document.getElementById('ratingRow');
     const slot=document.getElementById('ratingGlyphSlot');
     if(!row || !slot) return;
-    const checkedNow=isChecked(stage,e);
     const r=getRating(e);
     if(!r) ratingExpanded=true; // never collapse an unrated artist
-    // collapsed glyph beside the name (only when checked + rated)
-    if(checkedNow && r){
+    // collapsed glyph beside the name (shown whenever rated, checked or not)
+    if(r){
       slot.classList.remove('hidden');
       slot.innerHTML=`<button type="button" class="rating-glyph rating-glyph-${r}" id="ratingGlyphBtn" aria-label="Your rating — tap to change" title="Your rating — tap to change">${RATING_GLYPHS[r]}</button>`;
       document.getElementById('ratingGlyphBtn').onclick=()=>{ ratingExpanded=!ratingExpanded; renderRatingUI(); };
@@ -2771,24 +2778,18 @@ function openArtist(stage,e){
       slot.classList.add('hidden');
       slot.innerHTML='';
     }
-    // chip row: shown when checked AND (unrated OR the user expanded it)
-    row.classList.toggle('hidden', !(checkedNow && ratingExpanded));
+    // chip row: shown whenever unrated, or the user tapped the glyph to change it
+    row.classList.toggle('hidden', !ratingExpanded);
     row.querySelectorAll('.rating-chip').forEach(ch=>{
       ch.classList.toggle('active', Number(ch.dataset.rating)===r);
     });
-    // "Note to self" indicator beside the name — same gate as the rating row:
-    // only when checkmarks are on AND this artist is checked (rated or not).
+    // "Note to self" indicator beside the name — shown unconditionally here
+    // too (see the comment above); the checkmarks-off case is handled by CSS.
     const noteSlot=document.getElementById('noteSlot');
     if(noteSlot){
-      if(checkedNow){
-        noteSlot.classList.remove('hidden');
-        const has=!!getNote(e);
-        noteSlot.innerHTML=`<button type="button" class="note-indicator${has?' has-note':''}" id="noteIndicatorBtn" aria-label="Note to self" title="Note to self">📝</button>`;
-        document.getElementById('noteIndicatorBtn').onclick=()=>openNoteModal(e);
-      } else {
-        noteSlot.classList.add('hidden');
-        noteSlot.innerHTML='';
-      }
+      const has=!!getNote(e);
+      noteSlot.innerHTML=`<button type="button" class="note-indicator${has?' has-note':''}" id="noteIndicatorBtn" aria-label="Note to self" title="Note to self">📝</button>`;
+      document.getElementById('noteIndicatorBtn').onclick=()=>openNoteModal(e);
     }
   }
 
@@ -2796,8 +2797,6 @@ function openArtist(stage,e){
   document.getElementById('checkBtn').onclick=()=>{
     toggleChecked(stage,e);
     document.getElementById('checkBtn').classList.toggle('checked', isChecked(stage,e));
-    if(isChecked(stage,e)) ratingExpanded = getRating(e) ? false : true; // re-checking a rated artist shows the collapsed glyph
-    renderRatingUI();
     favReminderDirty=true;
   };
   document.querySelectorAll('#ratingRow .rating-chip').forEach(chip=>{
@@ -3134,7 +3133,7 @@ function openExtraArtist(key){
 }
 
 /* ---------- artist ratings (Discovery extension) ----------
-   A rating (3 = ▲ Loved it, 2 = ● Liked it, 1 = ▼ Not for me) attaches to the
+   A rating (3 = ▲ Love, 2 = ● Like, 1 = ▼ Not for me) attaches to the
    ARTIST, not to a slot — so an act playing several slots shows one shared
    rating with no copy-loop, and the key is festival-INDEPENDENT so ratings can
    be carried to another festival app via the JSON export channel below.
@@ -3204,7 +3203,7 @@ function setNote(e, text){
   else { delete notes[k]; }
   saveNotes(); saveRatingNames();
 }
-// Shared compact rating glyphs — 3=▲ Loved it, 2=● Liked it, 1=▼ Not for me.
+// Shared compact rating glyphs — 3=▲ Love, 2=● Like, 1=▼ Not for me.
 
 // Used by the artist panel (collapsed glyph), the schedule pill-badges and the
 // Discovery filter so the symbol/colour language stays identical everywhere.
@@ -3700,7 +3699,7 @@ document.querySelectorAll('.font-size-btn[data-fav-view]').forEach(btn=>{
 
 /* Traceable taste signal for Surprise-me: lowercase genre tokens drawn from
    the user's own favorited artists (kind:'favorite') AND from artists rated
-   ▲ "Loved it" (getRating===3, kind:'rating'). Returns a
+   ▲ "Love" (getRating===3, kind:'rating'). Returns a
    Map<token, Array<{name, kind}>> so a later pick can be traced back to *why*
    it was boosted (see explainPick()). Same '/' separator convention
    filterByTag()/openArtist() already use for this field (see
@@ -3782,7 +3781,7 @@ function explainPick(matchedTokens, signal){
   if(!chosen) return null;
   return chosen.kind==='favorite'
     ? `Picked because you're into ${token} — like your favorite ${chosen.name}.`
-    : `Picked because you're into ${token} — like ${chosen.name}, which you rated ▲ Loved it.`;
+    : `Picked because you're into ${token} — like ${chosen.name}, an artist you rated ▲ Love.`;
 }
 function discoveryArtistCardHtml(s,e){
   const cls=slotClass(s);
