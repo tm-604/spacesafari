@@ -2,6 +2,22 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.6 — July 2026
+
+- "What's new" version headings now show major.minor again, matching how they looked before.
+
+## Version 1.6.5 — July 2026
+
+- Settings page now shows the full version number instead of just major.minor.
+
+## Version 1.6.4 — July 2026
+
+- Fixed: switching from Favorites to Discovery inside "Your favorites" could land you mid-list instead of at the top.
+
+## Version 1.6.3 — July 2026
+
+- Fixed: swiping down to close the artist page felt sluggish compared to Settings. Now dismisses smoothly from anywhere on the page, not just when scrolled to the top.
+
 ## Version 1.6.2 — July 2026
 
 - Improved an artist bio with more detail from their own SoundCloud page.

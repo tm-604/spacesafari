@@ -861,6 +861,21 @@ body.cols-1 .slot .sub{font-size:0.75rem;}
   }
   .sheet.map-sheet{ max-width:720px; }
 }
+/* The artist sheet's content scrolls in this nested wrapper instead of the
+   .sheet itself, mirroring #settingsSheet/.settings-body — that's what lets
+   swipe-to-dismiss (which gates on the outer .sheet's own scrollTop, see the
+   pointerdown handler below) fire from anywhere on the artist page, not only
+   when scrolled exactly to the top. #artistSheet's own overflow-y is turned
+   off here since scrolling now happens one level in; max-height/auto-sizing
+   for short bios still comes from the shared .sheet rule (unaffected — the
+   flex column just distributes existing height, it doesn't force one). */
+#artistSheet{display:flex; flex-direction:column; overflow-y:hidden;}
+.sheet-scroll{
+  flex:1 1 auto; min-height:0;
+  overflow-y:auto; overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+}
 .sheet-grab{width:38px;height:5px;border-radius:3px;background:var(--line); margin:0 auto;}
 .sheet-grab-zone{width:100%; display:flex; justify-content:center; padding:14px 0 16px 0; cursor:grab; touch-action:none;}
 .sheet .close{
@@ -1408,7 +1423,9 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   <div class="sheet" id="artistSheet">
     <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
     <button class="close" data-close>×</button>
-    <div id="artistBody"></div>
+    <div class="sheet-scroll" id="artistBodyScroll">
+      <div id="artistBody"></div>
+    </div>
   </div>
 </div>
 
@@ -1890,14 +1907,14 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.2';
-// Displayed version only shows major.minor ("1.4") — the patch digit now
-// bumps on every small fix (see project semver policy), which is precise
-// enough to be useful in CHANGELOG.md but too granular to show end users.
-// The in-app "What's new" list only ever adds entries for a MINOR/MAJOR
-// bump anyway, so a user tapping "Version 1.4" always lands on content that
-// actually matches what they see displayed.
-const APP_VERSION_DISPLAY = APP_VERSION.split('.').slice(0,2).join('.');
+const APP_VERSION = '1.6.6';
+// Shows the full version (major.minor.patch) on the Settings page — users
+// asked to see the exact build number, not a rounded-off major.minor. The
+// "What's new" list under it still only covers features and fixes for
+// something visibly broken (never data-only changes like a bio/link
+// correction), so most patch bumps won't have a matching entry there — that's
+// expected, not a mismatch to fix.
+const APP_VERSION_DISPLAY = APP_VERSION;
 
 
 /* User-facing changelog shown by the "What's new" tap on the Settings version
@@ -3121,7 +3138,7 @@ function openArtist(stage,e){
     // rather than showing an empty placeholder box
     this.remove();
   };
-  document.getElementById('artistSheet').scrollTop=0;
+  document.getElementById('artistBodyScroll').scrollTop=0;
   showOverlay('artistOverlay');
 }
 
@@ -3451,7 +3468,7 @@ function openExtraArtist(key){
       return items?`<div class="social-links">${items}</div>`:`<div class="social-links-empty">No links available for this artist</div>`;
     })()}`;
   requestAnimationFrame(()=>initCollapsibleInfoGrid(document.getElementById('artistBody')));
-  document.getElementById('artistSheet').scrollTop=0;
+  document.getElementById('artistBodyScroll').scrollTop=0;
   showOverlay('artistOverlay');
 }
 
@@ -4019,6 +4036,12 @@ function switchFavView(view){
   document.getElementById('notesBody').style.display = view==='notes' ? '' : 'none';
   if(view==='discovery') renderDiscovery();
   else if(view==='notes') renderNotesView();
+  // Favorites/Discovery/Notes are display-toggled siblings scrolling inside
+  // the SAME #favSheet (unlike Settings/Artist, this sheet has no nested
+  // scroll wrapper) — switching tabs never moved the actual scroll position,
+  // so scrolling down in Favorites then tapping Discovery landed mid-list
+  // instead of at the top. Reset on every switch.
+  document.getElementById('favSheet').scrollTop=0;
 }
 document.querySelectorAll('.font-size-btn[data-fav-view]').forEach(btn=>{
   btn.onclick=()=>switchFavView(btn.dataset.favView);
@@ -4738,10 +4761,12 @@ function setupSheetMoreCue(overlayEl){
   const sheet=overlayEl.querySelector('.sheet');
   if(!sheet) return;
   // Most overlays scroll the .sheet itself (it already has overflow-y:auto
-  // from the base .sheet rule), but Settings and Compare wrap a separate
-  // flex-column .settings-body as the real scroller so their header row can
-  // stay fixed above it — use that nested scroller when present.
-  const scroller=sheet.querySelector(':scope > .settings-body') || sheet;
+  // from the base .sheet rule), but Settings/Compare (.settings-body) and the
+  // artist sheet (.sheet-scroll) wrap a separate real scroller so their
+  // header row can stay fixed above it (and, for the artist sheet, so
+  // swipe-to-dismiss works from anywhere — see #artistSheet's CSS comment) —
+  // use that nested scroller when present.
+  const scroller=sheet.querySelector(':scope > .settings-body') || sheet.querySelector(':scope > .sheet-scroll') || sheet;
   let cue=scroller.querySelector(':scope > .sheet-more-cue');
   if(!cue){
     cue=document.createElement('div');
@@ -5918,8 +5943,13 @@ document.getElementById('settingsBtn').onclick=()=>{
 function renderChangelog(){
   const body=document.getElementById('changelogBody');
   body.innerHTML=CHANGELOG.map(entry=>{
+    // "What's new" entries only ever exist for a MINOR/MAJOR bump (x.y.0), so
+    // showing just major.minor here ("Version 1.6") reads cleanly — unlike the
+    // Settings-page version line just above this list, which intentionally
+    // shows the FULL x.y.z build number instead (see APP_VERSION_DISPLAY).
+    const versionShort=entry.version.split('.').slice(0,2).join('.');
     const items=entry.notes.map(n=>`<li>${escapeHtml(n)}</li>`).join('');
-    return `<div class="changelog-entry"><div class="settings-group-label">Version ${escapeHtml(entry.version)} — ${escapeHtml(entry.date)}</div><ul class="changelog-list">${items}</ul></div>`;
+    return `<div class="changelog-entry"><div class="settings-group-label">Version ${escapeHtml(versionShort)} — ${escapeHtml(entry.date)}</div><ul class="changelog-list">${items}</ul></div>`;
   }).join('');
 }
 (function(){
