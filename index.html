@@ -1890,7 +1890,7 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 // Displayed version only shows major.minor ("1.4") — the patch digit now
 // bumps on every small fix (see project semver policy), which is precise
 // enough to be useful in CHANGELOG.md but too granular to show end users.
@@ -4597,7 +4597,21 @@ function deliverICS(stage,e){
   // exactly the "stuck loading, then blank on refresh" failure this was
   // rewritten to fix. A self-contained data: URI has no such cross-context
   // lifetime issue, and navigating the CURRENT tab (no target/new window)
-  // is what reliably triggers the native "Add to Calendar" sheet on iOS.
+  // is what reliably triggers the native "Add to Calendar" sheet on iOS
+  // Safari in a regular browser tab.
+  //
+  // BUT once the app is installed to the Home Screen (standalone display
+  // mode), WebKit no longer has the full Safari chrome around it and
+  // data: URI navigation silently does nothing there — no sheet, no error.
+  // For that case, route through the service worker instead: it serves the
+  // .ics with a real `Content-Type: text/calendar` response to a same-origin
+  // GET, which iOS reliably recognizes and hands off to Calendar even in
+  // standalone mode (see sw.js's 'reminder.ics' fetch-intercept).
+  if(isStandalone() && installPlatform()==='ios'){
+    const base=location.pathname.replace(/[^/]*$/,'');
+    window.location.href=base+'reminder.ics?data='+encodeURIComponent(ics);
+    return;
+  }
   const dataUri='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
   const a=document.createElement('a');
   a.href=dataUri;

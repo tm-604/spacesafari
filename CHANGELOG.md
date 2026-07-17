@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.1 — July 2026
+
+- Fixed: the calendar reminder ("Set a reminder") wasn't opening the Calendar app on iOS when the app was installed to the Home Screen. Now works there too.
+
 ## Version 1.6.0 — July 2026
 
 - New: a "Send feedback" button in Settings, under About, so you can report a bug or suggest something directly.
