@@ -1546,7 +1546,8 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   <div class="sheet" id="changelogSheet">
     <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
     <button class="close" data-close>×</button>
-    <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:14px;">What's new</h2>
+    <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:2px;">What's new</h2>
+    <div class="settings-group-label" style="margin-bottom:14px;">(see github repo for full changelog)</div>
     <div id="changelogBody"></div>
   </div>
 </div>
@@ -1907,7 +1908,7 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.6';
+const APP_VERSION = '1.6.7';
 // Shows the full version (major.minor.patch) on the Settings page — users
 // asked to see the exact build number, not a rounded-off major.minor. The
 // "What's new" list under it still only covers features and fixes for

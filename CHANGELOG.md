@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.7 — July 2026
+
+- Added a "(see github repo for full changelog)" note under "What's new" in Settings.
+
 ## Version 1.6.6 — July 2026
 
 - "What's new" version headings now show major.minor again, matching how they looked before.
