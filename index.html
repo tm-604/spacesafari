@@ -1908,7 +1908,7 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.8';
+const APP_VERSION = '1.6.9';
 // Shows the full version (major.minor.patch) on the Settings page — users
 // asked to see the exact build number, not a rounded-off major.minor. The
 // "What's new" list under it still only covers features and fixes for
@@ -6200,7 +6200,15 @@ document.getElementById('nowPlayingBtn').onclick=()=>{
    it silently does nothing when opened as a local file:// page. */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    // GitHub Pages (Fastly CDN) serves sw.js with Cache-Control: max-age=600,
+    // and iOS Safari/WebKit is known to be unreliable about bypassing that
+    // cache for its own SW-update-check fetch — users could get stuck on an
+    // old cached sw.js for well past 10 minutes, missing new versions even
+    // after repeatedly closing/reopening the installed app. Registering with
+    // a version-stamped query string makes every release a genuinely
+    // different URL, so no stale cached response can ever match it — the
+    // query string doesn't affect the SW's scope (still the app root).
+    navigator.serviceWorker.register('./sw.js?v=' + APP_VERSION).catch(()=>{});
   });
 }
 </script>

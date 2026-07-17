@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.9 — July 2026
+
+- Fixed: some devices (especially iOS) could get stuck showing an older version even after repeatedly reopening the app. Updates should now reach every device reliably.
+
 ## Version 1.6.8 — July 2026
 
 - The "full changelog" note under "What's new" is now a clickable link to the GitHub repo's CHANGELOG.md.
