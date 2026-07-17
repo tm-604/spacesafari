@@ -559,6 +559,12 @@ body.rows-multiday.view-rows main{padding:14px 8px 55vh 8px;}
 /* AM/PM half of the compact hour label (fmtHour()), stacked under the hour
    digit in 12-hour mode — 24-hour mode never emits this span. */
 .time-cell-ampm{display:block; font-size:0.6rem; opacity:0.7; line-height:1.1; margin-top:1px;}
+/* Inline stacked-AM/PM unit for rendered time-range text (fmtStack()) — each
+   side of a range ("11:00 AM–2:00 PM") gets its own compact 2-line block so
+   the AM/PM suffix never wraps mid-range in a narrow card. Purely additive:
+   24-hour mode never emits this markup at all. */
+.time-stack{display:inline-flex; flex-direction:column; align-items:center; line-height:1.05; vertical-align:top;}
+.time-stack-ampm{font-size:0.68em; opacity:0.7;}
 /* one per stage column, row 1 — invisible, exists only so scroll-snap has
    a per-column anchor to align to. Kept separate from the grid's row-height
    sizing (width/height:1px) so it can never affect row alignment across
@@ -752,6 +758,8 @@ body.cols-1 .slot .sub{font-size:0.75rem;}
 /* Opens from inside the Settings sheet -> same z-index:70 lift as the others. */
 #discoveryIntroOverlay{ z-index:70; }
 #dataPrivacyOverlay{ z-index:70; }
+/* Opens from inside the Settings sheet (openRatingsExportBtn) -> same z-index:70 lift. */
+#ratingsExportOverlay{ z-index:70; }
 /* Note-to-self opens from the artist panel (base z-index:60) -> same 70 lift. */
 #noteOverlay{ z-index:70; }
 /* Artist panel opens from Favorites/Discovery/My Notes/tag-filter-results/Now
@@ -1412,15 +1420,30 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
       <button id="favRestoreBtn">Restore</button>
     </div>
     <div class="fav-backup-msg" id="favBackupMsg"></div>
-    <div class="fav-ratings-export" id="ratingsExportSection">
-      <div class="settings-group-label" style="margin-top:22px;">Artist ratings — carry across festivals</div>
-      <div class="fav-backup-label">The favorites code above only restores within this festival. Your artist ratings carry across festival apps — export them here, then import into another one to bring your taste with you.</div>
-      <button class="fav-backup-btn" id="ratingsExportBtn">Export my ratings</button>
-      <button class="fav-backup-btn fav-backup-btn-secondary" id="ratingsExportFileBtn">Download as file</button>
-      <textarea id="ratingsImportInput" placeholder="Paste exported ratings JSON here…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" style="width:100%; min-height:64px; resize:vertical; box-sizing:border-box; margin-bottom:10px; border-radius:10px; border:1px solid var(--line); background:var(--night-2); color:var(--ink); font-family:var(--font-mono); font-size:0.75rem; padding:10px 12px;"></textarea>
-      <button class="fav-backup-btn fav-backup-btn-secondary" id="ratingsImportBtn">Import ratings</button>
-      <div class="fav-backup-msg" id="ratingsExportMsg"></div>
-    </div>
+  </div>
+</div>
+
+<!-- Ratings/notes export overlay. Opened by the Settings "Export ratings /
+     notes" button (openRatingsExportBtn), which itself stays hidden until the
+     user actually has a rating or a note (see updateRatingsExportBtnVisibility(),
+     called from settingsBtn.onclick). Deliberately its own screen, not part of
+     the favorites Save/Restore sheet above — the two used to share one screen,
+     which caused a real mix-up (user nearly pasted a favorites backup code into
+     the ratings-import field, since both were "paste a code here" fields on the
+     same sheet). Same .overlay > .sheet chrome as the other Settings-launched
+     sheets (grab handle, close button, backdrop-click + swipe + Escape
+     dismissal for free). -->
+<div class="overlay" id="ratingsExportOverlay">
+  <div class="sheet" id="ratingsExportSheet">
+    <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
+    <button class="close" data-close>×</button>
+    <h2 class="artist-name" style="font-size:1.25rem; margin-bottom:14px;">Export ratings / notes</h2>
+    <div class="fav-backup-label">Your favorites code only restores within this festival. Your artist ratings and notes carry across festival apps — export them here, then import into another one to bring your taste with you.</div>
+    <button class="fav-backup-btn" id="ratingsExportBtn">Export my ratings</button>
+    <button class="fav-backup-btn fav-backup-btn-secondary" id="ratingsExportFileBtn">Download as file</button>
+    <textarea id="ratingsImportInput" placeholder="Paste exported ratings JSON here…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" style="width:100%; min-height:64px; resize:vertical; box-sizing:border-box; margin-bottom:10px; border-radius:10px; border:1px solid var(--line); background:var(--night-2); color:var(--ink); font-family:var(--font-mono); font-size:0.75rem; padding:10px 12px;"></textarea>
+    <button class="fav-backup-btn fav-backup-btn-secondary" id="ratingsImportBtn">Import ratings</button>
+    <div class="fav-backup-msg" id="ratingsExportMsg"></div>
   </div>
 </div>
 
@@ -1646,6 +1669,8 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
         <div class="settings-group-label">Backup &amp; Storage</div>
         <div class="fav-backup-label" id="dataPrivacyInstallPara">Installing the app locally will make sure your settings and favorites will be saved. In case you want to use the app online in your browser, make sure to back up your favorites manually below in case your browser data ever gets cleared.</div>
         <button class="fav-backup-btn fav-backup-btn-secondary" id="openFavFromSettingsBtn">Save / Restore Favorites</button>
+        <div class="fav-backup-label" id="ratingsExportHint" style="display:none; margin-top:12px; margin-bottom:6px;">Carry your ratings and notes over to another festival app.</div>
+        <button class="fav-backup-btn fav-backup-btn-secondary" id="openRatingsExportBtn" style="display:none;">Export ratings / notes</button>
       </div>
       <div class="settings-group">
         <div class="settings-group-label">About</div>
@@ -2017,8 +2042,12 @@ let scheduleView = (()=>{
 })();
 // If the app opens in Rows view (the full stage-rows overview), start with every
 // stage checked — mirrors the select-Rows handler so first launch shows all rows,
-// not the width-based Grid subset. Grid/List keep the defaultActiveStages() subset.
-if(scheduleView==='rows'){ activeStages = new Set(STAGES); }
+// not the width-based Grid subset. Grid also gets this treatment on Space Safari
+// specifically: Grid is this fork's actual default view (see comment above), and
+// with only 4 stages the width-based defaultActiveStages() subset regularly drops
+// one stage on a phone — not the "all podia visible" experience a first-time
+// visitor should land on. List keeps the defaultActiveStages() subset.
+if(scheduleView==='rows' || scheduleView==='grid'){ activeStages = new Set(STAGES); }
 function fmt(iso){
   const d=new Date(iso);
   const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0');
@@ -2028,6 +2057,22 @@ function fmt(iso){
     return h12+':'+m+' '+period;
   }
   return String(h).padStart(2,'0')+':'+m;
+}
+// HTML variant of fmt() for rendered time-range text (card subtext, artist
+// panel header, reminder summary) — in 12-hour mode, wraps each side's AM/PM
+// in a small stacked span below the digits (same idea as fmtHour()'s
+// .time-cell-ampm) instead of letting it sit inline, where it used to wrap
+// awkwardly mid-range in narrow cards (e.g. "11:00 AM–\n2:00 PM"). 24-hour
+// mode returns byte-identical plain text to fmt() — purely additive.
+// NEVER use this for genuinely plain-text contexts (ICS descriptions,
+// aria-labels) — those must stay real text, not HTML with embedded tags.
+function fmtStack(iso){
+  const d=new Date(iso);
+  const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0');
+  if(timeFormat!=='12') return String(h).padStart(2,'0')+':'+m;
+  const period = h<12 ? 'AM' : 'PM';
+  let h12 = h%12; if(h12===0) h12=12;
+  return '<span class="time-stack">'+h12+':'+m+'<span class="time-stack-ampm">'+period+'</span></span>';
 }
 // Compact hour-only label for axis labels (time rail in Grid, hour header in
 // Rows) — NOT used for event time ranges, which must keep minute precision
@@ -2216,7 +2261,7 @@ function renderNowPlaying(){
         return `<div class="fav-card np-row${label==='Now'?' np-row-current':''}" style="--sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" onclick="openArtistByIndex('${s}',${idx})">
           <div class="np-row-badge">${label}</div>
           <div class="nm">${escapeHtml(e.act)}</div>
-          <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+          <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
         </div>`;
       }).join('')}
     </div>`;
@@ -2350,7 +2395,7 @@ function render(){
   // render()'s first call happens before that later declaration initializes —
   // referencing it here threw "Cannot access 'fontSize' before initialization".
   let isXlFont=false; try{ isXlFont = localStorage.getItem('festapp_font')==='xl'; }catch(e){}
-  const timeColW = isXlFont ? 38 : 45;
+  const timeColW = isXlFont ? 26 : 30;
   const nameColMin = isXlFont ? 132 : 100;
   const tmpl=`${timeColW}px repeat(${cols}, minmax(${nameColMin}px,1fr))`;
 
@@ -2422,7 +2467,7 @@ function render(){
           const isNow = now>=segStart && now<segEnd;
           body+=`<div class="slot act ${cls}${isNow?' now':''}" data-stage="${s}" data-idx="${idx}" style="${rowStyle}" onclick="openArtistByIndex('${s}',${idx})">
             <div class="nm">${escapeHtml(e.act)}${isCont?' <span class="cont-tag">cont’d</span>':''}${pillBadges(s,e)}</div>
-            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+            <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
             ${isNow?'<span class="now-tag">NOW</span>':''}
           </div>`;
         } else if(e.type==='break'){
@@ -2479,7 +2524,7 @@ function renderListSchedule(main){
     const isNow = now>=new Date(e.start) && now<new Date(e.end);
     html+=`<div class="fav-card list-row ${cls}${isNow?' now':''}" style="--sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" data-stage="${s}" data-idx="${idx}" onclick="openArtistByIndex('${s}',${idx})">
       <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
-      <div class="sub">${fmt(e.start)}–${fmt(e.end)} · <span class="list-row-stage" style="color:var(--sc)">${escapeHtml(s)}</span></div>
+      <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)} · <span class="list-row-stage" style="color:var(--sc)">${escapeHtml(s)}</span></div>
       ${isNow?'<span class="now-tag">NOW</span>':''}
     </div>`;
   });
@@ -2572,7 +2617,7 @@ function renderRowsSchedule(main){
         const isNow = now>=new Date(e.start) && now<new Date(e.end);
         body+=`<div class="rows-block act ${cls}${isNow?' now':''}" data-stage="${s}" data-idx="${idx}" style="${colStyle}" onclick="openArtistByIndex('${s}',${idx})">
           <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
-          <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+          <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
           ${isNow?'<span class="now-tag">NOW</span>':''}
         </div>`;
       } else if(e.type==='break'){
@@ -2580,7 +2625,7 @@ function renderRowsSchedule(main){
       } else if(FESTIVAL_CONFIG.specialSlotType.enabled && e.type===FESTIVAL_CONFIG.specialSlotType.type){
         body+=`<div class="rows-block special" style="${colStyle}">
           <div class="sun"></div><div class="nm">${FESTIVAL_CONFIG.specialSlotType.label}</div>
-          <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+          <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
         </div>`;
       }
     });
@@ -2673,7 +2718,7 @@ function renderRowsScheduleMultiday(main){
           const isNow = now>=new Date(e.start) && now<new Date(e.end);
           body+=`<div class="rows-block act ${cls}${isNow?' now':''}" data-stage="${s}" data-idx="${idx}" style="${colStyle}" onclick="openArtistByIndex('${s}',${idx})">
             <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
-            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+            <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
             ${isNow?'<span class="now-tag">NOW</span>':''}
           </div>`;
         } else if(e.type==='break'){
@@ -2681,7 +2726,7 @@ function renderRowsScheduleMultiday(main){
         } else if(FESTIVAL_CONFIG.specialSlotType.enabled && e.type===FESTIVAL_CONFIG.specialSlotType.type){
           body+=`<div class="rows-block special" style="${colStyle}">
             <div class="sun"></div><div class="nm">${FESTIVAL_CONFIG.specialSlotType.label}</div>
-            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+            <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
           </div>`;
         }
       });
@@ -2728,7 +2773,7 @@ function renderSearch(main,q){
       .join('');
     html+=`<div class="slot act ${cls}" style="margin-bottom:7px; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" onclick="openArtistByIndex('${s}',${idx})">
       <div class="nm">${escapeHtml(e.act)}</div>
-      <div class="sub">${s} · ${day} · ${fmt(e.start)}–${fmt(e.end)}</div>
+      <div class="sub">${s} · ${day} · ${fmtStack(e.start)}–${fmtStack(e.end)}</div>
       ${matchTags ? `<div class="search-match-row">${matchTags}</div>` : ''}
     </div>`;
   });
@@ -2844,7 +2889,7 @@ function openArtist(stage,e){
         <button class="rating-chip${getRating(e)===1?' active':''}" data-rating="1">▼ Not for me</button>
       </div>
     </div>
-    <div class="artist-when" id="artistWhenBtn" role="button">${day}<span class="sep">·</span>${fmt(e.start)} – ${fmt(e.end)}
+    <div class="artist-when" id="artistWhenBtn" role="button">${day}<span class="sep">·</span>${fmtStack(e.start)} – ${fmtStack(e.end)}
       <svg class="when-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
     <div id="conflictWarn" style="display:none;"></div>
@@ -3090,7 +3135,7 @@ function renderFavorites(){
           const idx=DATA[s].indexOf(e);
           html+=`<div class="fav-card ${cls}" style="grid-column:${ci+1}; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" data-end="${new Date(e.end).getTime()}" onclick="openArtistByIndex('${s}',${idx})">
             <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
-            <div class="sub">${fmt(e.start)}–${fmt(e.end)}</div>
+            <div class="sub">${fmtStack(e.start)}–${fmtStack(e.end)}</div>
           </div>`;
         });
         html+=`</div>`;
@@ -4013,7 +4058,7 @@ function discoveryArtistCardHtml(s,e,openNote=false){
   const opener=openNote ? `openArtistNoteByIndex('${s}',${idx})` : `openArtistByIndex('${s}',${idx})`;
   return `<div class="slot act ${cls}" style="margin-bottom:6px; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" onclick="${opener}">
     <div class="nm">${escapeHtml(e.act)}${pillBadges(s,e)}</div>
-    <div class="sub">${s} · ${fmt(e.start)}–${fmt(e.end)}</div>
+    <div class="sub">${s} · ${fmtStack(e.start)}–${fmtStack(e.end)}</div>
   </div>`;
 }
 // "My Notes" tab content — every slot with a saved note, sorted chronologically
@@ -4322,7 +4367,7 @@ function clockTimeToLeadMinutes(startIso, hhmm){
 function openReminderPopup(stage,e){
   reminderTarget={stage,e};
   document.getElementById('reminderSummary').innerHTML=
-    `<strong>${escapeHtml(e.act)}</strong> on ${escapeHtml(stage)}<br>${fmt(e.start)} – ${fmt(e.end)}`;
+    `<strong>${escapeHtml(e.act)}</strong> on ${escapeHtml(stage)}<br>${fmtStack(e.start)} – ${fmtStack(e.end)}`;
   document.getElementById('reminderMsg').textContent='';
   const already=isReminded(stage,e);
   document.getElementById('reminderTitle').textContent = already ? 'Turn off reminder?' : 'Set a reminder';
@@ -4517,7 +4562,7 @@ function filterByTag(field, tag){
       // closing the artist" improvement the other 3 sites got.
       html+=`<div class="slot act ${cls}" style="margin-bottom:6px; --sc:var(--stage-${cls}); --sc-rgb:var(--stage-${cls}-rgb);" onclick="hideOverlay(document.getElementById('tagFilterOverlay')); openArtistByIndex('${s}',${idx})">
         <div class="nm">${escapeHtml(e.act)}</div>
-        <div class="sub">${s} · ${fmt(e.start)}–${fmt(e.end)}</div>
+        <div class="sub">${s} · ${fmtStack(e.start)}–${fmtStack(e.end)}</div>
       </div>`;
     });
   }
@@ -4780,7 +4825,7 @@ function runCompare(){
       html+=`<div class="compare-act-row">
         <div>
           <div class="compare-act-name">${escapeHtml(e.act)}</div>
-          <div class="compare-act-meta">${escapeHtml(stage)} · ${fmt(e.start)}–${fmt(e.end)}</div>
+          <div class="compare-act-meta">${escapeHtml(stage)} · ${fmtStack(e.start)}–${fmtStack(e.end)}</div>
           <div class="compare-act-who">${who.map(escapeHtml).join(', ')}</div>
         </div>
       </div>`;
@@ -5606,9 +5651,11 @@ document.querySelectorAll('.font-size-btn[data-scheduleview]').forEach(btn=>{
     // Rows is the full stage-rows overview, so selecting it re-checks every
     // stage: repopulate activeStages with all STAGES (same label-string key
     // format the chips use) and refresh the chip UI so they all show active.
-    // Explicit per-stage de-selection afterward is still allowed. Only 'rows'
-    // resets — Grid/List leave activeStages exactly as the user had it.
-    if(scheduleView==='rows'){
+    // Explicit per-stage de-selection afterward is still allowed. 'grid' also
+    // resets on this fork (Space Safari's actual default view, see the
+    // defaultActiveStages() comment above) — only 'list' leaves activeStages
+    // exactly as the user had it.
+    if(scheduleView==='rows' || scheduleView==='grid'){
       activeStages = new Set(STAGES);
       buildStageFilter();
     }
@@ -5655,6 +5702,20 @@ document.querySelectorAll('[data-checkmarks-opt]').forEach(btn=>{
   };
 });
 document.getElementById('discoveryIntroDismissBtn').onclick=()=>{ hideOverlay(document.getElementById('discoveryIntroOverlay')); };
+// Export ratings/notes button: stays hidden until there's actually something
+// to export, so it doesn't sit there permanently as dead-weight UI for anyone
+// who hasn't rated or noted a single artist yet. Re-checked every time
+// Settings opens (ratings/notes can be added mid-session), unlike the mostly-
+// static isOfflineUseSectionShown()-driven buttons nearby.
+function updateRatingsExportBtnVisibility(){
+  const btn=document.getElementById('openRatingsExportBtn');
+  const hint=document.getElementById('ratingsExportHint');
+  if(!btn) return;
+  const hasAny = Object.keys(ratings).length>0 || Object.keys(notes).length>0;
+  btn.style.display = hasAny ? '' : 'none';
+  if(hint) hint.style.display = hasAny ? '' : 'none';
+}
+document.getElementById('openRatingsExportBtn').onclick=()=>{ showOverlay('ratingsExportOverlay'); };
 document.getElementById('settingsBtn').onclick=()=>{
   if(!localStorage.getItem('festapp_settings_hint_seen')){
     localStorage.setItem('festapp_settings_hint_seen','1');
@@ -5669,6 +5730,7 @@ document.getElementById('settingsBtn').onclick=()=>{
   }
   lastSettingsOpenAt=now;
   renderInstallSection();
+  updateRatingsExportBtnVisibility();
   showOverlay('settingsOverlay');
   // Retaining the Settings scroll position across a close/reopen only makes
   // sense while the color scheme picker is expanded — that's the one flow where
