@@ -1,6 +1,6 @@
 // Bump this whenever index.html (or the lineup data inside it) changes,
 // so returning visitors pick up the new version instead of a stale cache.
-const CACHE_NAME = 'space-safari-cache-v115';
+const CACHE_NAME = 'space-safari-cache-v139';
 // Photos ARE precached (blocking, during install) so the app is fully usable
 // offline right after the first visit/install. No map file — Space Safari
 // has no map material yet (FESTIVAL_CONFIG.map.enabled:false).
