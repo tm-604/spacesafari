@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.11 — July 2026
+
+- Fixed a wrong photo for Luche (Live Goa) — it was showing an unrelated artist.
+
 ## Version 1.6.10 — July 2026
 
 - Added bio, country and genre for Emergency, resolved from their own confirmed artist profile.
