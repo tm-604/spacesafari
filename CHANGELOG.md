@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.13 — July 2026
+
+- Added a missing photo for AA Sudd & Daniel[I] (Live), found and confirmed manually.
+
 ## Version 1.6.12 — July 2026
 
 - Fixed artist info for Collision: the genre, bio and links had been mixed up with an unrelated, disbanded band of the same name.
