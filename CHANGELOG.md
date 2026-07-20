@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.12 — July 2026
+
+- Fixed artist info for Collision: the genre, bio and links had been mixed up with an unrelated, disbanded band of the same name.
+
 ## Version 1.6.11 — July 2026
 
 - Fixed a wrong photo for Luche (Live Goa) — it was showing an unrelated artist.
