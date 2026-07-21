@@ -2,6 +2,54 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.25 — July 2026
+
+- Added artist photos and bios for many more artists, using their SoundCloud profiles.
+
+## Version 1.6.24 — July 2026
+
+- Kim Kenis & J.Noon (Hybrid)'s artist page now links to both artists individually.
+
+## Version 1.6.23 — July 2026
+
+- Added a verified SoundCloud link after manual review.
+
+## Version 1.6.22 — July 2026
+
+- Added a verified SoundCloud link after manual review.
+
+## Version 1.6.21 — July 2026
+
+- Added 4 more verified SoundCloud links after a large research round.
+
+## Version 1.6.20 — July 2026
+
+- Added a couple more verified SoundCloud links.
+
+## Version 1.6.19 — July 2026
+
+- Artist pages can now show Facebook, Website, Discogs and Apple Music links where available.
+
+## Version 1.6.18 — July 2026
+
+- Fixed Collision's Instagram link after verifying it against their official website.
+
+## Version 1.6.17 — July 2026
+
+- Fixed a bug where some artists' Instagram links had been saved but never actually showed up on their page. Fixed for everyone affected.
+
+## Version 1.6.16 — July 2026
+
+- Added 2 more SoundCloud links after manual verification.
+
+## Version 1.6.15 — July 2026
+
+- Added 43 missing Instagram links and 16 missing MusicBrainz identifiers that were already researched but hadn't made it into the app yet.
+
+## Version 1.6.14 — July 2026
+
+- Added a missing SoundCloud link that was already researched but hadn't made it into the app yet.
+
 ## Version 1.6.13 — July 2026
 
 - Added a missing photo for AA Sudd & Daniel[I] (Live), found and confirmed manually.
