@@ -1265,6 +1265,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
 .fav-backup-btn:not(.fav-backup-btn-secondary){background:var(--accent); color:var(--night); border-color:var(--accent);}
 .fav-backup-btn-secondary{font-size:0.75rem; padding:9px; opacity:0.85;}
 .fav-backup-btn-danger{background:var(--heart); color:#fff; border-color:var(--heart);}
+.settings-om-symbol{text-align:center; font-size:1.375rem; color:var(--checked); opacity:0.65; padding:18px 0 6px; user-select:none;}
 .fav-restore-row{display:flex; gap:8px;}
 .fav-restore-row input{
   flex:1; padding:10px 12px; border-radius:10px; background:var(--night-2);
@@ -1742,6 +1743,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
       <div class="settings-group">
         <button class="fav-backup-btn fav-backup-btn-danger" id="resetAllDataBtn">Reset all data</button>
       </div>
+      <div class="settings-om-symbol" aria-hidden="true">ॐ</div>
     </div>
   </div>
 </div>
@@ -1910,7 +1912,7 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.25';
+const APP_VERSION = '1.6.26';
 // Shows the full version (major.minor.patch) on the Settings page — users
 // asked to see the exact build number, not a rounded-off major.minor. The
 // "What's new" list under it still only covers features and fixes for

@@ -2,6 +2,10 @@
 
 What’s new in the Space Safari festival app. Newest first.
 
+## Version 1.6.26 — July 2026
+
+- Added a small Om symbol at the bottom of the Settings page.
+
 ## Version 1.6.25 — July 2026
 
 - Added artist photos and bios for many more artists, using their SoundCloud profiles.
