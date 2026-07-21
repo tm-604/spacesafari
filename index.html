@@ -781,6 +781,17 @@ body.cols-1 .slot .sub{font-size:0.75rem;}
    #artistOverlay's own z-index:70 and DOM order (reminderOverlay is declared
    BEFORE artistOverlay) paints it BELOW the panel, making it invisible. */
 #reminderOverlay{ z-index:70; }
+/* The one-time install-nudge/desktop-Safari-warning popups (maybeShowInstallNudge())
+   fire on a user's FIRST-EVER favorite/checkmark toggle, which very commonly
+   happens from the heart/check icon INSIDE an already-open artist panel — same
+   z-index:70 lift as #noteOverlay/#reminderOverlay above, needed for the same
+   reason: without it, this popup ties with #artistOverlay's own z-index:70
+   lift at the base z-index:60 and renders invisibly behind the panel. Both
+   are declared after #artistOverlay in the DOM, so DOM order resolves the tie
+   in their favor once lifted here. Confirmed as a real, reproducible bug
+   2026-07-21 (not hypothetical) before this fix. */
+#installNudgeOverlay{ z-index:70; }
+#desktopSafariWarningOverlay{ z-index:70; }
 
 /* Plain classic text link under the version line — normal foreground colour
    (NOT an accent colour, so it stays legible in both themes) + underline is the
@@ -1408,7 +1419,7 @@ body:not([data-checkmarks="on"]) #favViewToggle{display:none;}
   <div class="sheet map-sheet">
     <div class="sheet-grab-zone"><div class="sheet-grab"></div></div>
     <button class="close" data-close>×</button>
-    <div class="map-notice">2025 festival map — official 2026 map not yet published, layout may change. Source: Instagram @ozorafestivalofficial.</div>
+    <div class="map-notice">No festival map available yet.</div>
     <div class="map-viewport" id="mapViewport">
       <button class="map-reset" id="mapReset" aria-label="Reset zoom">
         <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 3 6.7"/><polyline points="3 17 3 21 7 21"/></svg>
@@ -1837,73 +1848,32 @@ function photoUrl(act){
    als CSS-variabele-suffix (--stage-{id}) en moet uniek + CSS-veilig zijn.
    ==================================================================== */
 const FESTIVAL_CONFIG = {
-  "name": "Space Safari",
-  "feedbackEmail": "tm604festivals+spacesafari2026@gmail.com",
-  "stages": [
-    {
-      "label": "Supernova",
-      "id": "supernova",
-      "color": "#FF6FA0"
-    },
-    {
-      "label": "Nebula",
-      "id": "nebula",
-      "color": "#7C4DFF"
-    },
-    {
-      "label": "Zodiac",
-      "id": "zodiac",
-      "color": "#2DD4BF"
-    },
-    {
-      "label": "Galaxy",
-      "id": "galaxy",
-      "color": "#F97316"
-    }
+  name: "Space Safari",
+  /* Per-fork feedback mailbox for the Settings "Send feedback" button — uses
+     Gmail "+alias" addressing so incoming feedback can be filtered/labeled
+     by which fork it came from without exposing the underlying inbox in the
+     app's own UI (the button just says "Send feedback", no address shown). */
+  feedbackEmail: "tm604festivals+spacesafari2026@gmail.com",
+  stages: [
+    {label:"Supernova", id:"supernova", color:"#FF6FA0"},
+    {label:"Nebula",    id:"nebula",    color:"#7C4DFF"},
+    {label:"Zodiac",    id:"zodiac",    color:"#2DD4BF"},
+    {label:"Galaxy",    id:"galaxy",    color:"#F97316"}
   ],
-  "theme": {
-    "displayFont": "'Orbitron',sans-serif",
-    "bodyFont": "system-ui,-apple-system,'Segoe UI',sans-serif",
-    "monoFont": "'Space Mono',monospace"
-  },
-  "weather": {
-    "enabled": true,
-    "lat": 50.27,
-    "lon": 4.87,
-    "timezone": "Europe/Brussels",
-    "locationName": "Massembre, Belgium"
-  },
-  "map": {
-    "enabled": false,
-    "tabs": [],
-    "legend": false
-  },
-  "specialSlotType": {
-    "enabled": false,
-    "type": "special",
-    "label": ""
-  },
-  "artistInfoFields": [
-    [
-      "Country",
-      "country",
-      "/"
-    ],
-    [
-      "Genre",
-      "genre_full",
-      "/"
-    ],
-    [
-      "Label",
-      "label",
-      "/,"
-    ],
-    [
-      "Festivals",
-      "festivals",
-      ","
-    ]
+  // Fonts here are just the html-level fallback set once at load — the
+  // active color scheme's own CSS (body[data-scheme="..."]) is what actually
+  // drives --font-display/--font-mono for real content, see the scheme
+  // block near the top of <style>. Kept in sync with Nova Pulse (default)
+  // so this isn't a second, stale source of truth.
+  theme: { displayFont:"'Orbitron',sans-serif", bodyFont:"system-ui,-apple-system,'Segoe UI',sans-serif", monoFont:"'Space Mono',monospace" },
+  weather: { enabled:true, lat:50.27, lon:4.87, timezone:"Europe/Brussels", locationName:"Massembre, Belgium" },
+  map: { enabled:false, tabs:[], legend:false },
+  specialSlotType: { enabled:false, type:"special", label:"" },
+  artistInfoFields: [
+    ['Country',   'country',    '/'],
+    ['Genre',     'genre_full', '/'],
+    ['Label',     'label',      '/,'],
+    ['Festivals', 'festivals',  ',']
   ]
 };
 /* User-facing app version, shown in Settings -> About. Bump this on every
@@ -1912,7 +1882,7 @@ const FESTIVAL_CONFIG = {
    for cache-busting — this is a coarser, manually-maintained number meant to
    stay meaningful, something a user could reference when reporting an issue.
    There is no script for this one; a human has to remember to bump it. */
-const APP_VERSION = '1.6.26';
+const APP_VERSION = '1.6.34';
 // Shows the full version (major.minor.patch) on the Settings page — users
 // asked to see the exact build number, not a rounded-off major.minor. The
 // "What's new" list under it still only covers features and fixes for
@@ -3418,7 +3388,7 @@ function parseCombinedAct(name){
 // Empty by default; a fork only carries entries for its OWN no-slot
 // components that _artist-db actually has verified data on — never
 // fabricated (see openExtraArtist's graceful plain-text fallback for the rest).
-const EXTRA_ARTISTS={"azratek":{"name":"Azratek","bio":"Also performing as Azra Teʞ, a tekno DJ/producer active in the Belgian free-tekno underground with a SoundCloud presence dating back over a decade; played the Tekno'boat-bruxelles event series on the Péniche Éliane in Brussels. Half of the Space Safari live pairing Azratek vs Lokiiy. (Source: Resident Advisor events listing / artist's SoundCloud)","genre_full":"Tekno / Techno","soundcloud":"https://soundcloud.com/azratek","links":{},"country":"Belgium"},"lokiiy":{"name":"Lokiiy","bio":"Lökiiy is a producer and live act from Lille, in the north of France, making mental, tribe and tekno music. Active since around 2020 and inspired by Belgian rave culture, his productions favour hypnotic, dark, groovy and textured rhythms built to hit hard on big sound systems, with a focus on sound, connection and movement over any specific message. Booked via the Ritual Rave collective; half of the Space Safari live pairing Azratek vs Lokiiy. (Source: Ritual Rave artist page / artist's Bandcamp & SoundCloud)","country":"France","genre_full":"Tekno / Mental Techno / Tribe","soundcloud":"https://soundcloud.com/lookiiy","links":{"bandcamp":"https://lokiiy.bandcamp.com/","instagram":"https://www.instagram.com/lokiiy__/"}},"tmh":{"name":"TMH","bio":"Prague, Czechia-based producer and live performer also known as Tim Haze, blending tribal tekno with psychedelic influences, emotional melodies and punchy, dynamic basslines. A longtime member of the Tranzit Sound System free-party crew, he later co-founded Anthropoid Records and has released jointly with Adam Vandal's DCT Records (e.g. the \"Sjezd\" collaboration and the DCT 12 compilation). Half of the Space Safari live pairing TMH vs Adam Vandal. (Source: artist's Bandcamp / DCT Records Bandcamp)","country":"Czechia","genre_full":"Tekno / Tribe / Psychedelic","label":"Anthropoid Records","soundcloud":"https://soundcloud.com/tmh-tranzit","links":{"bandcamp":"https://tmh-tranzit.bandcamp.com/","facebook":"https://www.facebook.com/tmhlivesetz1/","discogs":"https://www.discogs.com/artist/5987061"},"festivals":"Fenix Festival, UFO BUFO"},"adam vandal":{"name":"Adam Vandal","bio":"Prague, Czechia-based producer and owner of DCT Records, a label centered on tekno, acid, tribe and mental techno styles with releases dating back to 2019 and a roster including regular collaborator TMH. A pioneering figure in the Czech mental/acid techno free-party scene. Half of the Space Safari live pairing TMH vs Adam Vandal. (Source: DCT Records Bandcamp / Beatport artist page)","country":"Czechia","genre_full":"Mental Techno / Acid Techno / Tekno / Tribe","label":"DCT Records","links":{"bandcamp":"https://dctrecords.bandcamp.com/","facebook":"https://www.facebook.com/Adam.Vandal.DCT/","discogs":"https://www.discogs.com/artist/293230"},"festivals":"BreakFest Music Festival","soundcloud":"https://soundcloud.com/adam-vandal"},"pala10":{"name":"Pala10","bio":"Pala10 (Palatine Demoen) is a Belgian DJ/selector who started as a vinyl selector for the Foundation Sound System, developing a deep grounding in dub and roots reggae before expanding into club- and bass-influenced digital sets. A regular at Brussels' Kiosk Radio and a performer at venues and events including Horst Arts and Music and the Onassis Foundation's Plásmata. Half of the Space Safari back-to-back Pala10 B2B Elisethere, with whom she has also shared a Kiosk Radio broadcast. (Source: Resident Advisor / Horst Arts and Music / Kiosk Radio)","country":"Belgium","genre_full":"Dub / Roots Reggae / Bass Music","links":{"instagram":"https://www.instagram.com/palatinedemoen/"},"festivals":"Horst Arts and Music"},"elisethere":{"name":"Elisethere","bio":"A DJ/selecta originally from Toulouse, France, now based in Brussels, Belgium, recognised for a selecta style built around the dub siren and a range spanning 90s roots to digital-era dub and steppers. A regular on Kiosk Radio (including the \"Dub Punishers\" show) and a resident presence at Brussels' GIMIC. Half of the Space Safari back-to-back Pala10 B2B Elisethere, with whom she has shared a Kiosk Radio broadcast. (Source: Kiosk Radio artist page / Horst Arts and Music)","country":"France","genre_full":"Dub / Roots Reggae / Stepper","links":{"instagram":"https://www.instagram.com/elisethere___/"},"festivals":"Couleur Cafe"},"kim kenis":{"name":"Kim Kenis","soundcloud":"https://soundcloud.com/kimkenis"},"j.noon (hybrid)":{"name":"J.Noon","soundcloud":"https://soundcloud.com/jnoonbxl"}};
+const EXTRA_ARTISTS={"azratek":{"name":"Azratek","bio":"Also performing as Azra Teʞ, a tekno DJ/producer active in the Belgian free-tekno underground with a SoundCloud presence dating back over a decade; played the Tekno'boat-bruxelles event series on the Péniche Éliane in Brussels. Half of the Space Safari live pairing Azratek vs Lokiiy. (Source: Resident Advisor events listing / artist's SoundCloud)","genre_full":"Tekno / Techno","soundcloud":"https://soundcloud.com/azratek","links":{},"country":"Belgium"},"lokiiy":{"name":"Lokiiy","bio":"Lökiiy is a producer and live act from Lille, in the north of France, making mental, tribe and tekno music. Active since around 2020 and inspired by Belgian rave culture, his productions favour hypnotic, dark, groovy and textured rhythms built to hit hard on big sound systems, with a focus on sound, connection and movement over any specific message. Booked via the Ritual Rave collective; half of the Space Safari live pairing Azratek vs Lokiiy. (Source: Ritual Rave artist page / artist's Bandcamp & SoundCloud)","country":"France","genre_full":"Tekno / Mental Techno / Tribe","soundcloud":"https://soundcloud.com/lookiiy","links":{"bandcamp":"https://lokiiy.bandcamp.com/","instagram":"https://www.instagram.com/lokiiy__/"}},"tmh":{"name":"TMH","bio":"Prague, Czechia-based producer and live performer also known as Tim Haze, blending tribal tekno with psychedelic influences, emotional melodies and punchy, dynamic basslines. A longtime member of the Tranzit Sound System free-party crew, he later co-founded Anthropoid Records and has released jointly with Adam Vandal's DCT Records (e.g. the \"Sjezd\" collaboration and the DCT 12 compilation). Half of the Space Safari live pairing TMH vs Adam Vandal. (Source: artist's Bandcamp / DCT Records Bandcamp)","country":"Czechia","genre_full":"Tekno / Tribe / Psychedelic","label":"Anthropoid Records","soundcloud":"https://soundcloud.com/tmh-tranzit","links":{"bandcamp":"https://tmh-tranzit.bandcamp.com/","facebook":"https://www.facebook.com/tmhlivesetz1/","discogs":"https://www.discogs.com/artist/5987061"},"festivals":"Fenix Festival, UFO BUFO"},"adam vandal":{"name":"Adam Vandal","bio":"Prague, Czechia-based producer and owner of DCT Records, a label centered on tekno, acid, tribe and mental techno styles with releases dating back to 2019 and a roster including regular collaborator TMH. A pioneering figure in the Czech mental/acid techno free-party scene. Half of the Space Safari live pairing TMH vs Adam Vandal. (Source: DCT Records Bandcamp / Beatport artist page)","country":"Czechia","genre_full":"Mental Techno / Acid Techno / Tekno / Tribe","label":"DCT Records","links":{"bandcamp":"https://dctrecords.bandcamp.com/","facebook":"https://www.facebook.com/Adam.Vandal.DCT/","discogs":"https://www.discogs.com/artist/293230"},"festivals":"BreakFest Music Festival","soundcloud":"https://soundcloud.com/adam-vandal"},"pala10":{"name":"Pala10","bio":"Pala10 (Palatine Demoen) is a Belgian DJ/selector who started as a vinyl selector for the Foundation Sound System, developing a deep grounding in dub and roots reggae before expanding into club- and bass-influenced digital sets. A regular at Brussels' Kiosk Radio and a performer at venues and events including Horst Arts and Music and the Onassis Foundation's Plásmata. Half of the Space Safari back-to-back Pala10 B2B Elisethere, with whom she has also shared a Kiosk Radio broadcast. (Source: Resident Advisor / Horst Arts and Music / Kiosk Radio)","country":"Belgium","genre_full":"Dub / Roots Reggae / Bass Music","links":{"instagram":"https://www.instagram.com/palatinedemoen/"},"festivals":"Horst Arts and Music"},"elisethere":{"name":"Elisethere","bio":"A DJ/selecta originally from Toulouse, France, now based in Brussels, Belgium, recognised for a selecta style built around the dub siren and a range spanning 90s roots to digital-era dub and steppers. A regular on Kiosk Radio (including the \"Dub Punishers\" show) and a resident presence at Brussels' GIMIC. Half of the Space Safari back-to-back Pala10 B2B Elisethere, with whom she has shared a Kiosk Radio broadcast. (Source: Kiosk Radio artist page / Horst Arts and Music)","country":"France","genre_full":"Dub / Roots Reggae / Stepper","links":{"instagram":"https://www.instagram.com/elisethere___/"},"festivals":"Couleur Cafe"},"kim kenis":{"name":"Kim Kenis","soundcloud":"https://soundcloud.com/kimkenis"},"j.noon (hybrid)":{"name":"J.Noon","soundcloud":"https://soundcloud.com/jnoonbxl"},"le motel":{"name":"Le Motel","bio":"Le Motel is a Belgian producer and sound designer known for blending organic field recordings with forward-thinking electronic production; past collaborators include Roméo Elvis and Veence Hanao. Half of the Space Safari pairing Le Motel & Simsaara. (Source: Resident Advisor / Beatport)","country":"Belgium","genre_full":"Electronica","soundcloud":"https://soundcloud.com/le-motel","links":{}},"simsaara":{"name":"Simsaara","bio":"Simsaara (Siméon Grégoire) is a Belgian electronic music producer and DJ with an artist profile on Resident Advisor, active in Belgium's Brussels and Ghent scenes. Half of the Space Safari pairing Le Motel & Simsaara. (Source: Resident Advisor)","country":"Belgium","genre_full":"Electronica","links":{}}};
 function combinedActLinksHtml(actName){
   const parsed=parseCombinedAct(actName);
   if(!parsed) return '';
@@ -3464,10 +3434,10 @@ function openExtraArtist(key){
         const connectorHtml=connector ? `<span class="info-tag-connector">${escapeHtml(connector)}</span>` : '';
         return `${connectorHtml}<span class="info-tag-static">${escapeHtml(value)}</span>`;
       }).join('');
-      return `<dt>${k}</dt><dd>${tagHtml}</dd>`;
+      return `<dt>${escapeHtml(k)}</dt><dd>${tagHtml}</dd>`;
     }).join('')}</dl>`;
   }
-  const bioHtml=(extra.bio||'').replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  const bioHtml=escapeHtml(extra.bio||'').replace(/\*([^*]+)\*/g,'<em>$1</em>');
   document.getElementById('artistBody').innerHTML=`
     <div class="artist-top"></div>
     <div class="artist-name-row">
@@ -3822,7 +3792,7 @@ function importRatingsJSON(text){
     // "Note to self" travels in the reserved comment field — same LOCAL WINS
     // rule: only fill it in when this device has no note for that artist yet.
     if(typeof ent.comment==='string' && ent.comment && !notes[ent.key]){
-      const nc=ent.comment.slice(0,140).replace(/\s+/g,' ').trim();
+      const nc=ent.comment.slice(0,2000).replace(/\s+/g,' ').trim();
       if(nc) notes[ent.key]=nc;
     }
     if(localKeys.has(ent.key)) matched++;
